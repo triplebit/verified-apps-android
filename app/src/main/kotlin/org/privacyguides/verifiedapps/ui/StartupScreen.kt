@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.privacyguides.verifiedapps.R
 
@@ -71,8 +72,10 @@ fun StartupScreen(
             )
         }
         Text(
-            text = stringResource(R.string.app_name),
-            style = typography.headlineLarge
+            text = stringResource(R.string.app_header),
+            style = typography.headlineLarge,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
         )
         FilledTonalButton(
             modifier = modifier.fillMaxWidth(),

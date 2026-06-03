@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">Verified Apps</string>
+    <string name="app_header">Verified Apps\nby Privacy Guides</string>
     <string name="settings">Settings</string>
     <string name="view_source_code_setting_name">Source code</string>
     <string name="view_source_code_setting_description">View Verified Apps\' source code on the GitHub website in your web browser</string>

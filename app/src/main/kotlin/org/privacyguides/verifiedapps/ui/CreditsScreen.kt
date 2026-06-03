@@ -225,11 +225,35 @@ const val APACHE2LICENSE = "\n" +
         "   See the License for the specific language governing permissions and\n" +
         "   limitations under the License."
 
+const val ISCLICENSE = "\n" +
+        "ISC License\n" +
+        "\n" +
+        "Copyright (c) 2024-2025 soupslurpr\n" +
+        "\n" +
+        "Permission to use, copy, modify, and/or distribute this software for any\n" +
+        "purpose with or without fee is hereby granted, provided that the above\n" +
+        "copyright notice and this permission notice appear in all copies.\n" +
+        "\n" +
+        "THE SOFTWARE IS PROVIDED \"AS IS\" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH\n" +
+        "REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY\n" +
+        "AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,\n" +
+        "INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM\n" +
+        "LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR\n" +
+        "OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR\n" +
+        "PERFORMANCE OF THIS SOFTWARE."
+
 @Composable
 fun CreditsScreen() {
     LazyColumn(
         modifier = Modifier
     ) {
+        item {
+            CreditsItem(
+                dependencyName = "AppVerifier",
+                dependencyPackageName = "dev.soupslurpr.appverifier",
+                dependencyLicense = ISCLICENSE,
+            )
+        }
         item {
             CreditsItem(
                 dependencyName = "Material Components For Android",
