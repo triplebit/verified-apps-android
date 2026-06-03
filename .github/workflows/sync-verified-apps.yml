@@ -1,0 +1,62 @@
+name: Sync privacyguides/verified-apps database
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  attestations: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      PRIVACYGUIDES_DATA_URL: https://raw.githubusercontent.com/privacyguides/verified-apps/main/data.yml
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download verified-apps database
+        run: curl -fsSL -o "$RUNNER_TEMP/data.yml" "$PRIVACYGUIDES_DATA_URL"
+
+      - name: Verify database attestation
+        run: |
+          for i in 1 2 3 4 5; do
+            if gh attestation verify -R privacyguides/verified-apps \
+              --cert-identity-regex 'https://github.com/privacyguides/.github/.github/workflows/sign-artifact.yml*' \
+              "$RUNNER_TEMP/data.yml" 2>/dev/null; then
+              exit 0
+            fi
+            echo "Attestation not yet available, retrying in 10s (attempt $i/5)..."
+            sleep 10
+          done
+          gh attestation verify -R privacyguides/verified-apps \
+            --cert-identity-regex 'https://github.com/privacyguides/.github/.github/workflows/sign-artifact.yml*' \
+            "$RUNNER_TEMP/data.yml"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Replace internal database from data.yml
+        run: python .github/scripts/generate_internal_db.py --data-yml "$RUNNER_TEMP/data.yml"
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/kotlin/org/privacyguides/verifiedapps/InternalVerificationInfoDatabase.kt
+          if git diff --cached --quiet; then
+            echo "No database changes to commit."
+          else
+            git commit \
+              -m "Sync internal database from privacyguides/verified-apps" \
+              -m "Replace InternalVerificationInfoDatabase.kt with data from privacyguides/verified-apps main/data.yml (attestation-verified)." \
+              -m "Co-authored-by: Privacy Guides [bot] <github-bot@privacyguides.net>"
+            git push
+          fi
