@@ -40,9 +40,11 @@
     <string name="donation">Donation</string>
     <string name="donation_setting_name">Donation</string>
     <string name="donation_setting_description">Make a donation to support Privacy Guides\' non-profit mission.</string>
-    <string name="contributing">Contributing</string>
+    <string name="advanced">Advanced</string>
     <string name="show_hasmultiplesigners_setting_name">Show hasMultipleSigners</string>
     <string name="show_hasmultiplesigners_setting_description">"Shows hasMultipleSigners in the app verification screen. This is useful for contributing to the internal verification info database."</string>
     <string name="show_sharing_tools_setting_name">Show sharing tools</string>
     <string name="show_sharing_tools_setting_description">Shows share and copy verification info buttons on the app verification screen</string>
+    <string name="show_system_apps_setting_name">Show system apps</string>
+    <string name="show_system_apps_setting_description">Include pre-installed system apps in the app list. Note that many of these apps are not eligible for submission!</string>
 </resources>

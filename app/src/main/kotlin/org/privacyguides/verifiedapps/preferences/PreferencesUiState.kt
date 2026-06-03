@@ -25,6 +25,12 @@ data class PreferencesUiState(
         mutableStateOf(false)
     ),
 
+    /** Whether to include system apps in the app list. */
+    val showSystemApps: Pair<Preferences.Key<Boolean>, MutableState<Boolean>> = Pair(
+        (booleanPreferencesKey("SHOW_SYSTEM_APPS")),
+        mutableStateOf(false)
+    ),
+
     /** Pitch black background. */
     val pitchBlackBackground: Pair<Preferences.Key<Boolean>, MutableState<Boolean>> = Pair(
         (booleanPreferencesKey("PITCH_BLACK_BACKGROUND")),

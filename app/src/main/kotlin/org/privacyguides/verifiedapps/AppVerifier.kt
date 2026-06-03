@@ -169,7 +169,8 @@ fun AppVerifierApp(
                     { },
                     { },
                     { verifyAppViewModel.getHashesFromPackageInfo(it) },
-                    { verifyAppViewModel.getInternalDatabaseInfoFromVerificationInfo(it) }
+                    { verifyAppViewModel.getInternalDatabaseInfoFromVerificationInfo(it) },
+                    preferencesUiState.value.showSystemApps.second.value,
                 )
             }
             composableWithDefaultSlideTransitions(route = AppVerifierScreens.VerifyApp) {

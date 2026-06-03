@@ -30,6 +30,7 @@ import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -59,19 +60,23 @@ fun AppListScreen(
     onSearchActiveChange: (active: Boolean) -> Unit,
     getHashesFromPackageInfo: (packageInfo: PackageInfo) -> Hashes,
     getInternalDatabaseInfoFromVerificationInfo: (verification: VerificationInfo) -> InternalDatabaseInfo,
+    showSystemApps: Boolean,
 ) {
     val context = LocalContext.current
 
     val packageManager: PackageManager = context.packageManager
 
-    val systemPackages = packageManager.getInstalledPackages(PackageManager.MATCH_SYSTEM_ONLY)
-
-    val userInstalledPackages = packageManager.getInstalledPackages(0)
-
-    userInstalledPackages.removeIf { userInstalledPackage ->
-        userInstalledPackage.packageName == systemPackages.firstOrNull {
-            it.packageName == userInstalledPackage.packageName
-        }?.packageName
+    val installedPackages = remember(showSystemApps) {
+        val packages = packageManager.getInstalledPackages(0).toMutableList()
+        if (!showSystemApps) {
+            val systemPackages = packageManager.getInstalledPackages(PackageManager.MATCH_SYSTEM_ONLY)
+            packages.removeIf { installedPackage ->
+                installedPackage.packageName == systemPackages.firstOrNull {
+                    it.packageName == installedPackage.packageName
+                }?.packageName
+            }
+        }
+        packages
     }
 
     LaunchedEffect(key1 = Unit) {
@@ -110,7 +115,7 @@ fun AppListScreen(
                 innerPadding.calculateEndPadding(LayoutDirection.Ltr)
             )
         ) {
-            items(userInstalledPackages) {
+            items(installedPackages) {
                 // Do not show Verified Apps in the list as there is no point in using it to verify itself.
                 if (it.packageName == context.packageName) return@items
 

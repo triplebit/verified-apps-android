@@ -69,32 +69,6 @@ fun SettingsScreen(
         }
 
         Column {
-            SettingsCategoryText(category = stringResource(id = R.string.contributing))
-            SettingsItem(
-                name = stringResource(id = R.string.show_hasmultiplesigners_setting_name),
-                description = stringResource(R.string.show_hasmultiplesigners_setting_description),
-                hasSwitch = true,
-                checked = preferencesUiState.showHasMultipleSigners.second.value,
-                onCheckedChange = {
-                    coroutineScope.launch {
-                        preferencesViewModel.setPreference(preferencesUiState.showHasMultipleSigners.first, it)
-                    }
-                }
-            )
-            SettingsItem(
-                name = stringResource(id = R.string.show_sharing_tools_setting_name),
-                description = stringResource(R.string.show_sharing_tools_setting_description),
-                hasSwitch = true,
-                checked = preferencesUiState.showSharingTools.second.value,
-                onCheckedChange = {
-                    coroutineScope.launch {
-                        preferencesViewModel.setPreference(preferencesUiState.showSharingTools.first, it)
-                    }
-                }
-            )
-        }
-
-        Column {
             SettingsCategoryText(category = stringResource(id = R.string.about))
 //            SettingsItem(
 //                name = stringResource(id = R.string.open_appverifier_website_setting_name),
@@ -173,6 +147,43 @@ fun SettingsScreen(
                         contentDescription = null
                     )
                 }
+            )
+        }
+
+        Column {
+            SettingsCategoryText(category = stringResource(id = R.string.advanced))
+            SettingsItem(
+                name = stringResource(id = R.string.show_system_apps_setting_name),
+                description = stringResource(R.string.show_system_apps_setting_description),
+                hasSwitch = true,
+                checked = preferencesUiState.showSystemApps.second.value,
+                onCheckedChange = {
+                    coroutineScope.launch {
+                        preferencesViewModel.setPreference(preferencesUiState.showSystemApps.first, it)
+                    }
+                },
+            )
+            SettingsItem(
+                name = stringResource(id = R.string.show_hasmultiplesigners_setting_name),
+                description = stringResource(R.string.show_hasmultiplesigners_setting_description),
+                hasSwitch = true,
+                checked = preferencesUiState.showHasMultipleSigners.second.value,
+                onCheckedChange = {
+                    coroutineScope.launch {
+                        preferencesViewModel.setPreference(preferencesUiState.showHasMultipleSigners.first, it)
+                    }
+                },
+            )
+            SettingsItem(
+                name = stringResource(id = R.string.show_sharing_tools_setting_name),
+                description = stringResource(R.string.show_sharing_tools_setting_description),
+                hasSwitch = true,
+                checked = preferencesUiState.showSharingTools.second.value,
+                onCheckedChange = {
+                    coroutineScope.launch {
+                        preferencesViewModel.setPreference(preferencesUiState.showSharingTools.first, it)
+                    }
+                },
             )
         }
 

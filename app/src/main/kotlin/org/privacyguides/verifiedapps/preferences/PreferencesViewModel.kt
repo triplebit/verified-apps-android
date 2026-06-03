@@ -57,6 +57,13 @@ class PreferencesViewModel(private val dataStore: DataStore<Preferences>) : View
                                 .showSharingTools.second.value
                         )
                     ),
+                    showSystemApps = Pair(
+                        uiState.value.showSystemApps.first,
+                        mutableStateOf(
+                            settings[uiState.value.showSystemApps.first] ?: uiState.value
+                                .showSystemApps.second.value
+                        )
+                    ),
                     pitchBlackBackground = Pair(
                         uiState.value.pitchBlackBackground.first,
                         mutableStateOf(
