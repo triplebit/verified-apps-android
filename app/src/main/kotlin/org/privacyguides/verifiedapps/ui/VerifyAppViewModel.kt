@@ -145,36 +145,13 @@ class VerifyAppViewModel(application: Application) : AndroidViewModel(applicatio
                 return@run InternalDatabaseInfo(InternalDatabaseStatus.NOT_FOUND, listOf(Source.NONE))
             }
 
-            return@run if (verificationInfo.hashes.hasMultipleSigners) {
-                val maybeMatchedHashes = packageNameMatchedInternalDatabaseVerificationInfo.hashesList.find {
-                    it ==
-                            verificationInfo.hashes
-                }
-                if (maybeMatchedHashes != null) {
-                    InternalDatabaseInfo(InternalDatabaseStatus.MATCH, maybeMatchedHashes.sources)
-                } else {
-                    InternalDatabaseInfo(InternalDatabaseStatus.NOMATCH, listOf(Source.NONE))
-                }
+            val maybeMatchedHashes = packageNameMatchedInternalDatabaseVerificationInfo.hashesList.find {
+                it.matchesSigningFingerprints(verificationInfo.hashes)
+            }
+            if (maybeMatchedHashes != null) {
+                InternalDatabaseInfo(InternalDatabaseStatus.MATCH, maybeMatchedHashes.sources)
             } else {
-                packageNameMatchedInternalDatabaseVerificationInfo
-                    .hashesList
-                    .forEach { internalDatabaseHashes ->
-                        if (internalDatabaseHashes
-                                .hasMultipleSigners
-                            == verificationInfo.hashes
-                                .hasMultipleSigners
-                        ) {
-                            verificationInfo.hashes.hashes.last().let { hash ->
-                                if (internalDatabaseHashes.hashes.last() == hash) {
-                                    return@run InternalDatabaseInfo(
-                                        InternalDatabaseStatus.MATCH,
-                                        internalDatabaseHashes.sources
-                                    )
-                                }
-                            }
-                        }
-                    }
-                return InternalDatabaseInfo(InternalDatabaseStatus.NOMATCH, listOf(Source.NONE))
+                InternalDatabaseInfo(InternalDatabaseStatus.NOMATCH, listOf(Source.NONE))
             }
         }
     }
