@@ -13,6 +13,19 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideIn
 import androidx.compose.animation.slideOut
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.FileOpen
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -22,7 +35,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDeepLink
@@ -53,6 +68,13 @@ enum class AppVerifierScreens(@StringRes val title: Int) {
     Credits(title = R.string.credits),
 }
 
+private val bottomNavRoutes = setOf(
+    AppVerifierScreens.AppList.name,
+    AppVerifierScreens.Settings.name,
+    AppVerifierScreens.About.name,
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppVerifierApp(
     modifier: Modifier,
@@ -66,12 +88,8 @@ fun AppVerifierApp(
     val verifyAppUiState = verifyAppViewModel.uiState.collectAsState()
 
     val navController = rememberNavController()
-
-//    val backStackEntry by navController.currentBackStackEntryAsState()
-
-//    val currentScreen = AppVerifierScreens.valueOf(
-//        backStackEntry?.destination?.route ?: AppVerifierScreens.AppList.name
-//    )
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route
 
     val context = LocalContext.current
 
@@ -89,15 +107,83 @@ fun AppVerifierApp(
 
     var searchQuery by rememberSaveable { mutableStateOf("") }
 
-    NavHost(
-        navController = navController,
-        startDestination = if (isActionSend || isActionView) {
-            AppVerifierScreens.VerifyApp.name
-        } else {
-            AppVerifierScreens.AppList.name
-        },
+    fun navigateToBottomNavDestination(screen: AppVerifierScreens) {
+        navController.navigate(screen.name) {
+            popUpTo(AppVerifierScreens.AppList.name) {
+                saveState = true
+            }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
+    Scaffold(
         modifier = modifier,
-    ) {
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        bottomBar = {
+            if (currentRoute in bottomNavRoutes) {
+                NavigationBar {
+                    NavigationBarItem(
+                        selected = currentRoute == AppVerifierScreens.AppList.name,
+                        onClick = { navigateToBottomNavDestination(AppVerifierScreens.AppList) },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.List,
+                                contentDescription = stringResource(R.string.app_list),
+                            )
+                        },
+                        label = { Text(stringResource(R.string.app_list)) },
+                    )
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = {
+                            openApkFileLauncher.launch(
+                                arrayOf("application/vnd.android.package-archive"),
+                            )
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Default.FileOpen,
+                                contentDescription = stringResource(R.string.nav_open_apk),
+                            )
+                        },
+                        label = { Text(stringResource(R.string.nav_open_apk)) },
+                    )
+                    NavigationBarItem(
+                        selected = currentRoute == AppVerifierScreens.Settings.name,
+                        onClick = { navigateToBottomNavDestination(AppVerifierScreens.Settings) },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = stringResource(R.string.settings),
+                            )
+                        },
+                        label = { Text(stringResource(R.string.settings)) },
+                    )
+                    NavigationBarItem(
+                        selected = currentRoute == AppVerifierScreens.About.name,
+                        onClick = { navigateToBottomNavDestination(AppVerifierScreens.About) },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = stringResource(R.string.about),
+                            )
+                        },
+                        label = { Text(stringResource(R.string.about)) },
+                    )
+                }
+            }
+        },
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = if (isActionSend || isActionView) {
+                AppVerifierScreens.VerifyApp.name
+            } else {
+                AppVerifierScreens.AppList.name
+            },
+            modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
+        ) {
             composableWithDefaultSlideTransitions(route = AppVerifierScreens.AppList) {
                 AppListScreen(
                     searchQuery,
@@ -119,15 +205,6 @@ fun AppVerifierApp(
                     onQueryChange = { searchQuery = it },
                     onSearch = { },
                     onSearchActiveChange = { },
-                    onNavigateToSettings = {
-                        navController.navigate(AppVerifierScreens.Settings.name)
-                    },
-                    onNavigateToAbout = {
-                        navController.navigate(AppVerifierScreens.About.name)
-                    },
-                    onVerifyApkFile = {
-                        openApkFileLauncher.launch(arrayOf("application/vnd.android.package-archive"))
-                    },
                     getHashesFromPackageInfo = { verifyAppViewModel.getHashesFromPackageInfo(it) },
                     getInternalDatabaseInfoFromVerificationInfo = {
                         verifyAppViewModel.getInternalDatabaseInfoFromVerificationInfo(it)
@@ -152,13 +229,11 @@ fun AppVerifierApp(
             }
             composableWithDefaultSlideTransitions(route = AppVerifierScreens.Settings) {
                 SettingsScreen(
-                    onNavigateUp = { navController.navigateUp() },
                     preferencesViewModel = preferencesViewModel,
                 )
             }
             composableWithDefaultSlideTransitions(route = AppVerifierScreens.About) {
                 AboutScreen(
-                    onNavigateUp = { navController.navigateUp() },
                     onLicenseIconButtonClicked = {
                         navController.navigate(AppVerifierScreens.License.name)
                     },
@@ -180,6 +255,7 @@ fun AppVerifierApp(
                 CreditsScreen(onNavigateUp = { navController.navigateUp() })
             }
         }
+    }
 }
 
 fun getStateDestinationRoute(state: NavBackStackEntry): AppVerifierScreens? {

@@ -11,14 +11,12 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,20 +27,15 @@ import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.HelpOutline
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -95,9 +88,6 @@ fun AppListScreen(
     onQueryChange: (query: String) -> Unit,
     onSearch: (query: String) -> Unit,
     onSearchActiveChange: (active: Boolean) -> Unit,
-    onNavigateToSettings: () -> Unit,
-    onNavigateToAbout: () -> Unit,
-    onVerifyApkFile: () -> Unit,
     getHashesFromPackageInfo: (packageInfo: PackageInfo) -> Hashes,
     getInternalDatabaseInfoFromVerificationInfo: (verification: VerificationInfo) -> InternalDatabaseInfo,
     showSystemApps: Boolean,
@@ -187,73 +177,6 @@ fun AppListScreen(
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
-        bottomBar = {
-            val navigationBarPadding =
-                WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 8.dp,
-                        bottom = 8.dp + navigationBarPadding,
-                    ),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                HorizontalFloatingToolbar(
-                    expanded = true,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Box {
-                        IconButton(onClick = { sortMenuExpanded = true }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Sort,
-                                contentDescription = stringResource(R.string.toolbar_sort),
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = sortMenuExpanded,
-                            onDismissRequest = { sortMenuExpanded = false },
-                        ) {
-                            AppListSort.entries.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(appListSortLabel(option)) },
-                                    onClick = {
-                                        sortOrdinal = option.ordinal
-                                        sortMenuExpanded = false
-                                    },
-                                    leadingIcon = if (sortOrder == option) {
-                                        { Icon(Icons.Default.CheckCircle, contentDescription = null) }
-                                    } else {
-                                        null
-                                    },
-                                )
-                            }
-                        }
-                    }
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(
-                            imageVector = Icons.Filled.Settings,
-                            contentDescription = stringResource(R.string.toolbar_settings),
-                        )
-                    }
-                    IconButton(onClick = onNavigateToAbout) {
-                        Icon(
-                            imageVector = Icons.Filled.Info,
-                            contentDescription = stringResource(R.string.toolbar_about),
-                        )
-                    }
-                }
-                FloatingActionButton(onClick = onVerifyApkFile) {
-                    Icon(
-                        imageVector = Icons.Filled.FileOpen,
-                        contentDescription = stringResource(R.string.toolbar_verify_apk),
-                    )
-                }
-            }
-        },
         topBar = {
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -313,6 +236,39 @@ fun AppListScreen(
                                 contentDescription = stringResource(R.string.app_list_search_close),
                             )
                         }
+                    } else {
+                        Box {
+                            IconButton(onClick = { sortMenuExpanded = true }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Sort,
+                                    contentDescription = stringResource(R.string.app_list_sort),
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = sortMenuExpanded,
+                                onDismissRequest = { sortMenuExpanded = false },
+                            ) {
+                                AppListSort.entries.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = { Text(appListSortLabel(option)) },
+                                        onClick = {
+                                            sortOrdinal = option.ordinal
+                                            sortMenuExpanded = false
+                                        },
+                                        leadingIcon = if (sortOrder == option) {
+                                            {
+                                                Icon(
+                                                    Icons.Default.CheckCircle,
+                                                    contentDescription = null,
+                                                )
+                                            }
+                                        } else {
+                                            null
+                                        },
+                                    )
+                                }
+                            }
+                        }
                     }
                 },
             )
@@ -321,7 +277,8 @@ fun AppListScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding),
         ) {
             Row(
                 modifier = Modifier
@@ -384,6 +341,7 @@ fun AppListScreen(
             if (visibleEntries.isEmpty()) {
                 Column(
                     modifier = Modifier
+                        .weight(1f)
                         .fillMaxWidth()
                         .padding(32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -403,6 +361,7 @@ fun AppListScreen(
                 }
             } else {
                 LazyColumn(
+                    modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(
                         start = 16.dp,
                         end = 16.dp,
