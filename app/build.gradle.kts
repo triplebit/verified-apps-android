@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose") version "2.1.20"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.2.10"
 }
 
 android {
@@ -82,8 +82,8 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.4")
     implementation("com.google.accompanist:accompanist-drawablepainter:0.37.2")
 
-    implementation(platform("androidx.compose:compose-bom:2025.04.00"))
-    implementation("androidx.compose.material3:material3")
+    implementation(platform("androidx.compose:compose-bom:2025.12.01"))
+    implementation("androidx.compose.material3:material3:1.5.0-alpha15")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")

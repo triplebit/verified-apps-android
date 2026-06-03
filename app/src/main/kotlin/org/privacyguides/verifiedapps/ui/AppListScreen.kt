@@ -1,4 +1,8 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package org.privacyguides.verifiedapps.ui
+
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
@@ -409,7 +413,7 @@ fun AppItem(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = name,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMediumEmphasized,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )

@@ -1,4 +1,8 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package org.privacyguides.verifiedapps.ui
+
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 
 import android.app.ActivityOptions
 import android.content.ActivityNotFoundException
@@ -131,7 +135,7 @@ fun VerifyAppScreen(
                             modifier = Modifier.size(96.dp),
                         )
                     }
-                    Text(text = name, style = MaterialTheme.typography.headlineSmall)
+                    Text(text = name, style = MaterialTheme.typography.headlineSmallEmphasized)
                     Text(
                         text = packageName,
                         style = MaterialTheme.typography.bodyMedium,
@@ -175,7 +179,7 @@ fun VerifyAppScreen(
                         Text(
                             internalDatabaseInfo.internalDatabaseStatus.simpleInternalDatabaseStatus.name
                                 .replace('_', ' '),
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.titleLargeEmphasized,
                         )
                         Spacer(Modifier.width(8.dp))
                         Icon(

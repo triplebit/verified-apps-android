@@ -1,4 +1,8 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package org.privacyguides.verifiedapps.ui
+
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -76,7 +80,7 @@ fun StartupScreen(
                 )
                 Text(
                     text = stringResource(R.string.app_header),
-                    style = MaterialTheme.typography.headlineLarge,
+                    style = MaterialTheme.typography.headlineLargeEmphasized,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
