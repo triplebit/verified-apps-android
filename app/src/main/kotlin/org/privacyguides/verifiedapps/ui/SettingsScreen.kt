@@ -3,10 +3,7 @@ package org.privacyguides.verifiedapps.ui
 import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
@@ -41,6 +38,7 @@ fun SettingsScreen(
     val dynamicColorAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.settings)) },
@@ -216,8 +214,6 @@ fun SettingsScreen(
                     },
                 )
             }
-
-            Spacer(Modifier.padding(WindowInsets.navigationBars.asPaddingValues()))
         }
     }
 }

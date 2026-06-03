@@ -19,7 +19,6 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.privacyguides.verifiedapps.preferences.PreferencesViewModel
-import org.privacyguides.verifiedapps.ui.ReviewPrivacyPolicyAndLicense
 import org.privacyguides.verifiedapps.ui.VerifyAppViewModel
 import org.privacyguides.verifiedapps.ui.theme.AppVerifierTheme
 
@@ -65,33 +64,26 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            val preferencesUiState by preferencesViewModel.uiState.collectAsState()
             val preferencesLoaded by preferencesViewModel.preferencesLoaded.collectAsState()
 
             AppVerifierTheme(
                 preferencesViewModel = preferencesViewModel
             ) {
-                when {
-                    !preferencesLoaded -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CircularProgressIndicator()
-                        }
+                if (!preferencesLoaded) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator()
                     }
-                    !preferencesUiState.acceptedPrivacyPolicyAndLicense.second.value -> {
-                        ReviewPrivacyPolicyAndLicense(preferencesViewModel = preferencesViewModel)
-                    }
-                    else -> {
-                        AppVerifierApp(
-                            modifier = Modifier,
-                            verifyAppViewModel = verifyAppViewModel,
-                            preferencesViewModel = preferencesViewModel,
-                            isActionSend = isActionSend,
-                            isActionView = isActionView,
-                        )
-                    }
+                } else {
+                    AppVerifierApp(
+                        modifier = Modifier,
+                        verifyAppViewModel = verifyAppViewModel,
+                        preferencesViewModel = preferencesViewModel,
+                        isActionSend = isActionSend,
+                        isActionView = isActionView,
+                    )
                 }
             }
         }

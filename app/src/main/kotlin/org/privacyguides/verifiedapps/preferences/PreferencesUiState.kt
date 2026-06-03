@@ -7,12 +7,6 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 
 /** Preference pairs, the first is the preference key, and the second is the default value. */
 data class PreferencesUiState(
-    /** Whether the user has accepted the privacy policy and license. */
-    val acceptedPrivacyPolicyAndLicense: Pair<Preferences.Key<Boolean>, MutableState<Boolean>> = Pair(
-        (booleanPreferencesKey("ACCEPTED_PRIVACY_POLICY_AND_LICENSE_DATE_1/4/2024")),
-        mutableStateOf(false)
-    ),
-
     /** Whether to show hasMultipleSigners */
     val showHasMultipleSigners: Pair<Preferences.Key<Boolean>, MutableState<Boolean>> = Pair(
         (booleanPreferencesKey("SHOW_HAS_MULTIPLE_SIGNERS")),
@@ -40,7 +34,7 @@ data class PreferencesUiState(
     /** Use Material You dynamic color from the system wallpaper (Android 12+). */
     val dynamicColor: Pair<Preferences.Key<Boolean>, MutableState<Boolean>> = Pair(
         booleanPreferencesKey("DYNAMIC_COLOR"),
-        mutableStateOf(true),
+        mutableStateOf(false),
     ),
 
     /** Pitch black background. */

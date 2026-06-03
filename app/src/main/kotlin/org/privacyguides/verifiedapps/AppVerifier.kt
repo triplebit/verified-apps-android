@@ -109,7 +109,7 @@ fun AppVerifierApp(
 
     fun navigateToBottomNavDestination(screen: AppVerifierScreens) {
         navController.navigate(screen.name) {
-            popUpTo(AppVerifierScreens.AppList.name) {
+            popUpTo(AppVerifierScreens.About.name) {
                 saveState = true
             }
             launchSingleTop = true
@@ -123,6 +123,17 @@ fun AppVerifierApp(
         bottomBar = {
             if (currentRoute in bottomNavRoutes) {
                 NavigationBar {
+                    NavigationBarItem(
+                        selected = currentRoute == AppVerifierScreens.About.name,
+                        onClick = { navigateToBottomNavDestination(AppVerifierScreens.About) },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = stringResource(R.string.about),
+                            )
+                        },
+                        label = { Text(stringResource(R.string.about)) },
+                    )
                     NavigationBarItem(
                         selected = currentRoute == AppVerifierScreens.AppList.name,
                         onClick = { navigateToBottomNavDestination(AppVerifierScreens.AppList) },
@@ -160,17 +171,6 @@ fun AppVerifierApp(
                         },
                         label = { Text(stringResource(R.string.settings)) },
                     )
-                    NavigationBarItem(
-                        selected = currentRoute == AppVerifierScreens.About.name,
-                        onClick = { navigateToBottomNavDestination(AppVerifierScreens.About) },
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = stringResource(R.string.about),
-                            )
-                        },
-                        label = { Text(stringResource(R.string.about)) },
-                    )
                 }
             }
         },
@@ -180,7 +180,7 @@ fun AppVerifierApp(
             startDestination = if (isActionSend || isActionView) {
                 AppVerifierScreens.VerifyApp.name
             } else {
-                AppVerifierScreens.AppList.name
+                AppVerifierScreens.About.name
             },
             modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
         ) {

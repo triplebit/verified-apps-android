@@ -28,8 +28,6 @@ class PreferencesViewModel(private val dataStore: DataStore<Preferences>) : View
     private suspend fun populateSettingsFromDatastore() {
         dataStore.data.collect { settings ->
             _uiState.update { state ->
-                state.acceptedPrivacyPolicyAndLicense.second.value =
-                    settings[state.acceptedPrivacyPolicyAndLicense.first] ?: false
                 state.showHasMultipleSigners.second.value =
                     settings[state.showHasMultipleSigners.first] ?: false
                 state.showSharingTools.second.value =
@@ -39,7 +37,7 @@ class PreferencesViewModel(private val dataStore: DataStore<Preferences>) : View
                 state.showSystemApps.second.value =
                     settings[state.showSystemApps.first] ?: false
                 state.dynamicColor.second.value =
-                    settings[state.dynamicColor.first] ?: true
+                    settings[state.dynamicColor.first] ?: false
                 state.pitchBlackBackground.second.value =
                     settings[state.pitchBlackBackground.first] ?: false
                 state
@@ -58,8 +56,6 @@ class PreferencesViewModel(private val dataStore: DataStore<Preferences>) : View
     private fun updateLocalPreference(key: Preferences.Key<Boolean>, value: Boolean) {
         _uiState.update { state ->
             when (key) {
-                state.acceptedPrivacyPolicyAndLicense.first ->
-                    state.acceptedPrivacyPolicyAndLicense.second.value = value
                 state.showHasMultipleSigners.first ->
                     state.showHasMultipleSigners.second.value = value
                 state.showSharingTools.first ->
