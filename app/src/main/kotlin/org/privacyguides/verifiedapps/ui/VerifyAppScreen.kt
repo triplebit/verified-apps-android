@@ -50,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat.startActivity
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
+import org.privacyguides.verifiedapps.R
 import org.privacyguides.verifiedapps.data.Hashes
 import org.privacyguides.verifiedapps.data.InternalDatabaseInfo
 import org.privacyguides.verifiedapps.data.InternalDatabaseStatus
@@ -112,16 +113,28 @@ fun VerifyAppScreen(
                 }
             }
             Spacer(Modifier.height(8.dp))
+            val databaseStatus = internalDatabaseInfo.internalDatabaseStatus
             val showGitHubSubmit =
-                internalDatabaseInfo.internalDatabaseStatus == InternalDatabaseStatus.NOT_FOUND ||
+                databaseStatus == InternalDatabaseStatus.NOT_FOUND ||
+                    databaseStatus == InternalDatabaseStatus.NOMATCH ||
                     alwaysShowGitHubSubmit
             if (showGitHubSubmit) {
-                if (internalDatabaseInfo.internalDatabaseStatus == InternalDatabaseStatus.NOT_FOUND) {
-                    Text(
-                        "Not in database — submit fingerprints for review on GitHub.",
-                        style = typography.bodyMedium,
-                    )
-                    Spacer(Modifier.height(8.dp))
+                when (databaseStatus) {
+                    InternalDatabaseStatus.NOT_FOUND -> {
+                        Text(
+                            "Not in database — submit fingerprints for review on GitHub.",
+                            style = typography.bodyMedium,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    InternalDatabaseStatus.NOMATCH -> {
+                        Text(
+                            text = stringResource(R.string.nomatch_github_submit_message),
+                            style = typography.bodyMedium,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    InternalDatabaseStatus.MATCH -> Unit
                 }
                 Button(
                     onClick = {

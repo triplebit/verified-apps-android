@@ -45,6 +45,7 @@
     <string name="show_hasmultiplesigners_setting_description">"Shows hasMultipleSigners in the app verification screen. This is useful for contributing to the internal verification info database."</string>
     <string name="show_sharing_tools_setting_name">Show sharing tools</string>
     <string name="show_sharing_tools_setting_description">Shows share and copy verification info buttons on the app verification screen</string>
+    <string name="nomatch_github_submit_message">It\'s possible this app is not legitimate, or this app is outdated, or our database is outdated. Please submit this fingerprint to our database, and our team will further investigate whether your copy of the app is legitimate and let you know in a reply online.</string>
     <string name="always_show_github_submit_setting_name">Always show Submit on GitHub</string>
     <string name="always_show_github_submit_setting_description">Shows the Submit on GitHub button even when the app is already in the internal database</string>
     <string name="user_apps_tab">User Apps</string>
