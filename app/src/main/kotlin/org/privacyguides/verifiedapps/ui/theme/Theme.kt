@@ -14,45 +14,49 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import org.privacyguides.verifiedapps.preferences.PreferencesViewModel
 
-/**
- * Dark color scheme for devices < Android 12, which do not support dynamic color.
- */
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80,
+    primary = TealDarkPrimary,
+    onPrimary = TealDarkOnPrimary,
+    primaryContainer = TealDarkPrimaryContainer,
+    onPrimaryContainer = TealDarkOnPrimaryContainer,
+    background = Color(0xFF101413),
+    onBackground = Color(0xFFE2E3E1),
+    surface = Color(0xFF101413),
+    onSurface = Color(0xFFE2E3E1),
+    surfaceContainerLow = Color(0xFF1A211F),
+    surfaceContainer = SurfaceContainerDark,
+    surfaceContainerHigh = Color(0xFF242B29),
+    surfaceContainerHighest = Color(0xFF2F3634),
+    outline = Color(0xFF8A9290),
+    outlineVariant = Color(0xFF3F4745),
 )
 
-/**
- * Light color scheme for devices < Android 12, which do not support dynamic color.
- */
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40,
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    primary = TealPrimary,
+    onPrimary = TealOnPrimary,
+    primaryContainer = TealPrimaryContainer,
+    onPrimaryContainer = TealOnPrimaryContainer,
+    background = Color(0xFFFBFDFC),
+    onBackground = Color(0xFF191C1B),
+    surface = Color(0xFFFBFDFC),
+    onSurface = Color(0xFF191C1B),
+    surfaceContainerLow = Color(0xFFF0F4F3),
+    surfaceContainer = SurfaceContainerLight,
+    surfaceContainerHigh = Color(0xFFE6ECEC),
+    surfaceContainerHighest = Color(0xFFDAE4E2),
+    outline = Color(0xFF6F7977),
+    outlineVariant = Color(0xFFBFC9C6),
 )
 
 @Composable
 fun AppVerifierTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     preferencesViewModel: PreferencesViewModel,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     val settingsUiState by preferencesViewModel.uiState.collectAsState()
-
-    val pitchBlackBackground = settingsUiState.pitchBlackBackground.second.value and darkTheme
+    val pitchBlackBackground = settingsUiState.pitchBlackBackground.second.value && darkTheme
 
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
@@ -75,7 +79,7 @@ fun AppVerifierTheme(
             if (pitchBlackBackground) {
                 DarkColorScheme.copy(
                     background = Color.Black,
-                    surface = Color.Black
+                    surface = Color.Black,
                 )
             } else {
                 DarkColorScheme
@@ -88,6 +92,7 @@ fun AppVerifierTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
-        content = content
+        shapes = AppShapes,
+        content = content,
     )
 }

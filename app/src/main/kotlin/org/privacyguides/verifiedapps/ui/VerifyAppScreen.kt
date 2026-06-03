@@ -28,9 +28,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme.typography
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -82,122 +85,175 @@ fun VerifyAppScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 16.dp, vertical = 16.dp)
             .verticalScroll(verticalScroll),
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (apkFailedToParse) {
-            Text("APK FAILED TO PARSE")
-            Text(
-                "Make sure you provided a valid apk file."
-            )
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                ),
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text(
+                        "APK failed to parse",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                    Text(
+                        "Make sure you provided a valid APK file.",
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+            }
         } else {
-            if (icon != null) {
-                Image(
-                    rememberDrawablePainter(drawable = icon),
-                    null,
-                    Modifier.size(150.dp),
-                )
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    if (icon != null) {
+                        Image(
+                            rememberDrawablePainter(drawable = icon),
+                            contentDescription = null,
+                            modifier = Modifier.size(96.dp),
+                        )
+                    }
+                    Text(text = name, style = MaterialTheme.typography.headlineSmall)
+                    Text(
+                        text = packageName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = hashes.hashes.joinToString("\n"),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                    )
+                    if (showHasMultipleSigners) {
+                        Text(
+                            text = "hasMultipleSigners: ${hashes.hasMultipleSigners}",
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
             }
-            Text(
-                text = name,
-                style = typography.titleLarge,
-            )
-            Text(text = packageName)
-            Text(
-                text = hashes.hashes.joinToString("\n"),
-                fontFamily = FontFamily.Monospace,
-            )
-            if (showHasMultipleSigners) {
-                Text("hasMultipleSigners: ")
-                Text(
-                    hashes.hasMultipleSigners.toString(),
-                    fontWeight = FontWeight.Black,
-                )
-            }
-            Spacer(Modifier.height(16.dp))
-            Text("Internal Database Status:")
-            Row {
-                FilledTonalButton(
-                    onClick = { showMoreInfoAboutInternalDatabaseStatusDialog = true },
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                ),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text(
-                        internalDatabaseInfo.internalDatabaseStatus.simpleInternalDatabaseStatus.name.replace('_', ' '),
-                        style = typography.headlineLarge,
+                        "Internal database status",
+                        style = MaterialTheme.typography.titleMedium,
                     )
-                    Spacer(Modifier.width(8.dp))
-                    Icon(
-                        Icons.Default.Info,
-                        "More info about internal database status",
-                        tint = internalDatabaseInfo.internalDatabaseStatus.simpleInternalDatabaseStatus.color,
-                    )
+                    FilledTonalButton(
+                        onClick = { showMoreInfoAboutInternalDatabaseStatusDialog = true },
+                    ) {
+                        Text(
+                            internalDatabaseInfo.internalDatabaseStatus.simpleInternalDatabaseStatus.name
+                                .replace('_', ' '),
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Icon(
+                            Icons.Default.Info,
+                            "More info about internal database status",
+                            tint = internalDatabaseInfo.internalDatabaseStatus.simpleInternalDatabaseStatus.color,
+                        )
+                    }
+                    val databaseStatus = internalDatabaseInfo.internalDatabaseStatus
+                    val showGitHubSubmit =
+                        databaseStatus == InternalDatabaseStatus.NOT_FOUND ||
+                            databaseStatus == InternalDatabaseStatus.NOMATCH ||
+                            alwaysShowGitHubSubmit
+                    if (showGitHubSubmit) {
+                        when (databaseStatus) {
+                            InternalDatabaseStatus.NOT_FOUND -> {
+                                Text(
+                                    "Not in database — submit fingerprints for review on GitHub.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                            InternalDatabaseStatus.NOMATCH -> {
+                                Text(
+                                    text = stringResource(R.string.nomatch_github_submit_message),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                            InternalDatabaseStatus.MATCH -> Unit
+                        }
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                val issueUri = GitHubAppSubmission.newIssueUri(
+                                    packageManager = context.packageManager,
+                                    packageName = packageName,
+                                    appLabel = name,
+                                    hashes = hashes,
+                                )
+                                openGitHubSubmission(context, issueUri)
+                            },
+                        ) {
+                            Text("Submit on GitHub")
+                        }
+                    }
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            val databaseStatus = internalDatabaseInfo.internalDatabaseStatus
-            val showGitHubSubmit =
-                databaseStatus == InternalDatabaseStatus.NOT_FOUND ||
-                    databaseStatus == InternalDatabaseStatus.NOMATCH ||
-                    alwaysShowGitHubSubmit
-            if (showGitHubSubmit) {
-                when (databaseStatus) {
-                    InternalDatabaseStatus.NOT_FOUND -> {
-                        Text(
-                            "Not in database — submit fingerprints for review on GitHub.",
-                            style = typography.bodyMedium,
-                        )
-                        Spacer(Modifier.height(8.dp))
-                    }
-                    InternalDatabaseStatus.NOMATCH -> {
-                        Text(
-                            text = stringResource(R.string.nomatch_github_submit_message),
-                            style = typography.bodyMedium,
-                        )
-                        Spacer(Modifier.height(8.dp))
-                    }
-                    InternalDatabaseStatus.MATCH -> Unit
-                }
-                Button(
-                    onClick = {
-                        val issueUri = GitHubAppSubmission.newIssueUri(
-                            packageManager = context.packageManager,
-                            packageName = packageName,
-                            appLabel = name,
-                            hashes = hashes,
-                        )
-                        openGitHubSubmission(context, issueUri)
-                    },
-                ) {
-                    Text("Submit on GitHub")
-                }
-                Spacer(Modifier.height(8.dp))
-            }
+
             if (showSharingTools) {
                 val clipboardManager = LocalClipboardManager.current
                 val verificationData = GitHubAppSubmission.buildVerificationInfo(packageName, hashes)
                 val mimeType = "text/plain"
-                Button(onClick = {
-                    val sendIntent = Intent().apply {
-                        action = Intent.ACTION_SEND
-                        putExtra(Intent.EXTRA_TEXT, verificationData)
-                        type = mimeType
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            val sendIntent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(Intent.EXTRA_TEXT, verificationData)
+                                type = mimeType
+                            }
+                            val shareIntent = Intent.createChooser(sendIntent, null)
+                            startActivity(context, shareIntent, ActivityOptions.makeBasic().toBundle())
+                        },
+                    ) {
+                        Text("Share verification info")
                     }
-
-                    val shareIntent = Intent.createChooser(
-                        sendIntent,
-                        null,
-                    )
-
-                    startActivity(context, shareIntent, ActivityOptions.makeBasic().toBundle())
-                }) {
-                    Text("Share Verification Info")
-                }
-                Button(onClick = {
-                    val clip: ClipData = ClipData.newPlainText(mimeType, verificationData)
-                    clipboardManager.setClip(ClipEntry(clip))
-                }) {
-                    Text("Copy Verification Info")
+                    OutlinedButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            val clip = ClipData.newPlainText(mimeType, verificationData)
+                            clipboardManager.setClip(ClipEntry(clip))
+                        },
+                    ) {
+                        Text("Copy verification info")
+                    }
                 }
             }
         }
@@ -222,7 +278,7 @@ fun VerifyAppScreen(
                 ) {
                     Text(
                         internalDatabaseInfo.internalDatabaseStatus.name,
-                        style = typography.headlineSmall,
+                        style = MaterialTheme.typography.headlineSmall,
                         color = internalDatabaseInfo.internalDatabaseStatus.simpleInternalDatabaseStatus.color,
                     )
                 }
@@ -237,7 +293,7 @@ fun VerifyAppScreen(
                             Text("\nThe matched database entry for this app is from the following sources:\n")
                             Text(
                                 text = internalDatabaseInfo.sources.joinToString("\n") { it.displayName },
-                                style = typography.headlineSmall,
+                                style = MaterialTheme.typography.headlineSmall,
                             )
                             Text(
                                 "\nThis information can be useful if you distrust a specific source and want to make" +
