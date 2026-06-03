@@ -1,7 +1,6 @@
 package org.privacyguides.verifiedapps.ui
 
 import android.content.pm.PackageInfo
-import android.graphics.drawable.Drawable
 import org.privacyguides.verifiedapps.data.Hashes
 import org.privacyguides.verifiedapps.data.InternalDatabaseInfo
 import org.privacyguides.verifiedapps.data.InternalDatabaseStatus
@@ -10,7 +9,6 @@ data class AppListEntry(
     val name: String,
     val packageName: String,
     val packageInfo: PackageInfo,
-    val icon: Drawable,
     val hashes: Hashes,
     val internalDatabaseInfo: InternalDatabaseInfo,
 )

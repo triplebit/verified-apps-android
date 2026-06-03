@@ -47,9 +47,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -64,7 +66,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.privacyguides.verifiedapps.R
 import org.privacyguides.verifiedapps.data.Hashes
 import org.privacyguides.verifiedapps.data.InternalDatabaseInfo
@@ -95,6 +100,8 @@ fun AppListScreen(
 ) {
     val context = LocalContext.current
     val packageManager: PackageManager = context.packageManager
+    val appListViewModel: AppListViewModel = viewModel()
+    val appListUiState by appListViewModel.uiState.collectAsState()
 
     val systemPackageNames = remember {
         packageManager.getInstalledPackages(PackageManager.MATCH_SYSTEM_ONLY)
@@ -140,29 +147,43 @@ fun AppListScreen(
         }
     }
 
-    val listPackages = if (showSystemApps) {
-        when (AppListTab.entries[selectedTab]) {
-            AppListTab.User -> userPackages
-            AppListTab.System -> systemPackages
-        }
-    } else {
-        userPackages
-    }
-
     val selfPackageName = context.packageName
 
-    val allEntries = remember(
-        listPackages,
-        getHashesFromPackageInfo,
-        getInternalDatabaseInfoFromVerificationInfo,
-    ) {
-        buildAppListEntries(
-            packages = listPackages,
-            packageManager = packageManager,
+    LaunchedEffect(userPackages, getHashesFromPackageInfo, getInternalDatabaseInfoFromVerificationInfo) {
+        appListViewModel.ensureUserEntriesLoaded(
+            userPackages = userPackages,
             selfPackageName = selfPackageName,
             getHashesFromPackageInfo = getHashesFromPackageInfo,
             getInternalDatabaseInfoFromVerificationInfo = getInternalDatabaseInfoFromVerificationInfo,
         )
+    }
+
+    LaunchedEffect(
+        showSystemApps,
+        systemPackages,
+        getHashesFromPackageInfo,
+        getInternalDatabaseInfoFromVerificationInfo,
+    ) {
+        if (showSystemApps) {
+            appListViewModel.ensureSystemEntriesLoaded(
+                systemPackages = systemPackages,
+                selfPackageName = selfPackageName,
+                getHashesFromPackageInfo = getHashesFromPackageInfo,
+                getInternalDatabaseInfoFromVerificationInfo = getInternalDatabaseInfoFromVerificationInfo,
+            )
+        }
+    }
+
+    val allEntries = when {
+        showSystemApps && selectedTab == AppListTab.System.ordinal ->
+            appListUiState.systemEntries
+        else -> appListUiState.userEntries
+    }
+
+    val isLoadingEntries = when {
+        showSystemApps && selectedTab == AppListTab.System.ordinal ->
+            appListUiState.isLoadingSystem && allEntries.isEmpty()
+        else -> appListUiState.isLoadingUser && allEntries.isEmpty()
     }
 
     val visibleEntries = remember(allEntries, searchQuery, statusFilterMask, sortOrder) {
@@ -340,7 +361,17 @@ fun AppListScreen(
                 }
             }
 
-            if (visibleEntries.isEmpty()) {
+            if (isLoadingEntries) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (visibleEntries.isEmpty()) {
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -379,14 +410,13 @@ fun AppListScreen(
                                     entry.name,
                                     entry.packageName,
                                     entry.hashes,
-                                    entry.icon,
+                                    AppIconCache.get(packageManager, entry.packageName),
                                     entry.internalDatabaseInfo,
                                 )
                             },
                             leadingContent = {
-                                Image(
-                                    painter = rememberDrawablePainter(drawable = entry.icon),
-                                    contentDescription = null,
+                                AppListItemIcon(
+                                    packageName = entry.packageName,
                                     modifier = Modifier.size(48.dp),
                                 )
                             },
@@ -437,30 +467,28 @@ private fun appListFilterLabel(filter: AppListFilter): String = when (filter) {
     AppListFilter.MISMATCH -> stringResource(R.string.app_list_filter_mismatch)
 }
 
-private fun buildAppListEntries(
-    packages: List<PackageInfo>,
-    packageManager: PackageManager,
-    selfPackageName: String,
-    getHashesFromPackageInfo: (packageInfo: PackageInfo) -> Hashes,
-    getInternalDatabaseInfoFromVerificationInfo: (verification: VerificationInfo) -> InternalDatabaseInfo,
-): List<AppListEntry> = packages.mapNotNull { installedPackage ->
-    if (installedPackage.packageName == selfPackageName) return@mapNotNull null
+@Composable
+private fun AppListItemIcon(
+    packageName: String,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val packageManager = context.packageManager
+    var drawable by remember(packageName) { mutableStateOf<Drawable?>(null) }
 
-    val packageInfo = packageManager.getPackageInfo(
-        installedPackage.packageName,
-        PackageManager.GET_SIGNING_CERTIFICATES,
-    )
-    val applicationInfo = packageInfo.applicationInfo ?: return@mapNotNull null
-    val name = packageManager.getApplicationLabel(applicationInfo).toString()
-    val hashes = getHashesFromPackageInfo(packageInfo)
-    val verificationInfo = VerificationInfo(packageInfo.packageName, hashes)
+    LaunchedEffect(packageName) {
+        drawable = withContext(Dispatchers.IO) {
+            AppIconCache.get(packageManager, packageName)
+        }
+    }
 
-    AppListEntry(
-        name = name,
-        packageName = packageInfo.packageName,
-        packageInfo = packageInfo,
-        icon = packageManager.getApplicationIcon(applicationInfo),
-        hashes = hashes,
-        internalDatabaseInfo = getInternalDatabaseInfoFromVerificationInfo(verificationInfo),
-    )
+    if (drawable != null) {
+        Image(
+            painter = rememberDrawablePainter(drawable = drawable),
+            contentDescription = null,
+            modifier = modifier,
+        )
+    } else {
+        Spacer(modifier = modifier)
+    }
 }
