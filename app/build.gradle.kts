@@ -14,8 +14,12 @@ android {
         applicationId = "org.privacyguides.verifiedapps"
         minSdk = 28
         targetSdk = 35
-        versionCode = 13
-        versionName = versionCode.toString()
+        // CalVer YY.MM.PATCH (e.g. 26.6.0). versionCode = YY*1_000_000 + MM*10_000 + PATCH.
+        val releaseVersionYear = 26
+        val releaseVersionMonth = 6
+        val releaseVersionPatch = 0
+        versionCode = releaseVersionYear * 1_000_000 + releaseVersionMonth * 10_000 + releaseVersionPatch
+        versionName = "${releaseVersionYear}.${releaseVersionMonth}.${releaseVersionPatch}"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -41,6 +45,17 @@ android {
         generateLocaleConfig = true
         localeFilters += listOf("en")
     }
+    signingConfigs {
+        create("release") {
+            val keystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+            if (!keystorePath.isNullOrBlank()) {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -49,6 +64,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfigs.findByName("release")?.takeIf { it.storeFile?.exists() == true }?.let {
+                signingConfig = it
+            }
         }
         getByName("debug") {
             applicationIdSuffix = ".debug"

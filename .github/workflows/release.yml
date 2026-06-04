@@ -1,0 +1,100 @@
+# Builds a signed release APK and publishes it to a GitHub Release.
+#
+# Triggers on push of a CalVer tag (e.g. 26.6.0).
+#
+# Required repository secrets:
+#   ANDROID_KEYSTORE_BASE64  — release keystore file, base64-encoded
+#   ANDROID_KEYSTORE_PASSWORD
+#   ANDROID_KEY_ALIAS
+#   ANDROID_KEY_PASSWORD
+
+name: Build Release
+
+on:
+  push:
+    tags:
+      - "[0-9][0-9].[0-9]*.[0-9]*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Verify version matches tag
+        run: |
+          GRADLE_VERSION=$(awk '
+            /releaseVersionYear =/{ y=$NF }
+            /releaseVersionMonth =/{ m=$NF }
+            /releaseVersionPatch =/{ p=$NF; sub(/,.*/, "", p) }
+            END { printf "%d.%d.%d", y, m, p }
+          ' app/build.gradle.kts)
+          TAG="${{ github.ref_name }}"
+          if [ "$GRADLE_VERSION" != "$TAG" ]; then
+            echo "::error::Version mismatch: app/build.gradle.kts is ${GRADLE_VERSION}, but release tag is ${TAG}."
+            exit 1
+          fi
+          echo "Version ${GRADLE_VERSION} matches tag ${TAG}."
+
+      - name: Prepare release keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::error::Missing ANDROID_KEYSTORE_BASE64 secret. Add release signing secrets before publishing."
+            exit 1
+          fi
+          KEYSTORE_PATH="${{ runner.temp }}/release.keystore"
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$KEYSTORE_PATH"
+          echo "path=${KEYSTORE_PATH}" >> "$GITHUB_OUTPUT"
+        id: keystore
+
+      - name: Build release APK
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ steps.keystore.outputs.path }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleRelease --no-daemon
+
+      - name: Package release APK
+        id: apk
+        run: |
+          UNSIGNED="app/build/outputs/apk/release/app-release-unsigned.apk"
+          SIGNED="app/build/outputs/apk/release/app-release.apk"
+          if [ -f "$SIGNED" ]; then
+            APK="$SIGNED"
+          elif [ -f "$UNSIGNED" ]; then
+            echo "::error::Release APK is unsigned. Check ANDROID_KEYSTORE_* secrets and signing config."
+            exit 1
+          else
+            echo "::error::No release APK found under app/build/outputs/apk/release/"
+            exit 1
+          fi
+          ASSET="VerifiedApps-${{ github.ref_name }}.apk"
+          cp "$APK" "$ASSET"
+          echo "path=${ASSET}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: ${{ steps.apk.outputs.path }}
+          draft: true
+          prerelease: false
