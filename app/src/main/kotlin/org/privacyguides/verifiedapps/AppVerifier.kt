@@ -195,12 +195,13 @@ fun AppVerifierApp(
                     onSortOrdinalChange = { appListSortOrdinal = it },
                     statusFilterMask = appListStatusFilterMask,
                     onStatusFilterMaskChange = { appListStatusFilterMask = it },
-                    onAppListItemClick = { name, packageName, hashes, icon, internalDatabaseInfo ->
+                    onAppListItemClick = { name, packageName, hashes, icon, internalDatabaseInfo, isSystemApp ->
                         verifyAppViewModel.setAppVerificationInfo(
                             name,
                             packageName,
                             hashes,
                             internalDatabaseInfo,
+                            isSystemApp = isSystemApp,
                         )
                         verifyAppViewModel.setAppIcon(icon)
                         navController.navigate(AppVerifierScreens.VerifyApp.name)
@@ -219,6 +220,7 @@ fun AppVerifierApp(
                         )
                     },
                     preferencesViewModel = preferencesViewModel,
+                    onOpenAppListClicked = { navigateToTab(BottomNavPage.AppList) },
                     onLicenseIconButtonClicked = {
                         navController.navigate(AppVerifierScreens.License.name)
                     },
@@ -244,6 +246,7 @@ fun AppVerifierApp(
                     preferencesUiState.value.showSharingTools.second.value,
                     preferencesUiState.value.alwaysShowGitHubSubmit.second.value,
                     preferencesUiState.value.showCodebergSubmit.second.value,
+                    verifyAppUiState.value.isSystemApp.value,
                 )
             }
             composableWithDefaultSlideTransitions(route = AppVerifierScreens.License) {

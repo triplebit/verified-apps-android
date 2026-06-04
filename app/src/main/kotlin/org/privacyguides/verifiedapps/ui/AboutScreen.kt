@@ -15,7 +15,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,6 +39,7 @@ import org.privacyguides.verifiedapps.R
 
 @Composable
 fun AboutScreen(
+    onOpenAppListClicked: () -> Unit,
     onLicenseIconButtonClicked: () -> Unit,
     onPrivacyPolicyIconButtonClicked: () -> Unit,
     onCreditsIconButtonClicked: () -> Unit,
@@ -89,15 +92,45 @@ fun AboutScreen(
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    Button(onClick = onOpenAppListClicked) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.List,
+                            contentDescription = null,
+                        )
+                        Text(
+                            text = stringResource(R.string.open_app_list),
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
                 }
             }
 
+            ListItem(
+                modifier = Modifier.clickable {
+                    localUriHandler.openUri("https://www.privacyguides.org")
+                },
+                headlineContent = { Text(stringResource(R.string.visit_privacy_guides_setting_name)) },
+                supportingContent = { Text(stringResource(R.string.visit_privacy_guides_setting_description)) },
+                trailingContent = {
+                    Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null)
+                },
+            )
             ListItem(
                 modifier = Modifier.clickable {
                     localUriHandler.openUri("https://www.privacyguides.org/donate")
                 },
                 headlineContent = { Text(stringResource(R.string.donation_setting_name)) },
                 supportingContent = { Text(stringResource(R.string.donation_setting_description)) },
+                trailingContent = {
+                    Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null)
+                },
+            )
+            ListItem(
+                modifier = Modifier.clickable {
+                    localUriHandler.openUri("https://github.com/privacyguides/verified-apps")
+                },
+                headlineContent = { Text(stringResource(R.string.database_setting_name)) },
+                supportingContent = { Text(stringResource(R.string.database_setting_description)) },
                 trailingContent = {
                     Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null)
                 },

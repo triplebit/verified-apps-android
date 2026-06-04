@@ -33,6 +33,7 @@ fun MainTabsScreen(
         hashes: Hashes,
         icon: Drawable,
         internalDatabaseInfo: InternalDatabaseInfo,
+        isSystemApp: Boolean,
     ) -> Unit,
     onQueryChange: (query: String) -> Unit,
     onSearch: (query: String) -> Unit,
@@ -42,6 +43,7 @@ fun MainTabsScreen(
     showSystemApps: Boolean,
     onOpenApkFile: () -> Unit,
     preferencesViewModel: PreferencesViewModel,
+    onOpenAppListClicked: () -> Unit,
     onLicenseIconButtonClicked: () -> Unit,
     onPrivacyPolicyIconButtonClicked: () -> Unit,
     onCreditsIconButtonClicked: () -> Unit,
@@ -53,6 +55,7 @@ fun MainTabsScreen(
     ) { page ->
         when (MainPagerLayout.pages[page]) {
             MainPagerPage.About -> AboutScreen(
+                onOpenAppListClicked = onOpenAppListClicked,
                 onLicenseIconButtonClicked = onLicenseIconButtonClicked,
                 onPrivacyPolicyIconButtonClicked = onPrivacyPolicyIconButtonClicked,
                 onCreditsIconButtonClicked = onCreditsIconButtonClicked,

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FileOpen
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -63,7 +64,7 @@ fun OpenApkScreen(
             Spacer(modifier = Modifier.height(32.dp))
             Button(onClick = onOpenApkFile) {
                 Icon(
-                    imageVector = Icons.Default.FileOpen,
+                    imageVector = Icons.Default.FolderOpen,
                     contentDescription = null,
                 )
                 Text(

@@ -11,6 +11,7 @@ data class VerifyAppUiState(
     val hashes: MutableState<Hashes> = mutableStateOf(Hashes(listOf(Source.NONE), listOf(""), false)),
     val icon: MutableState<Drawable?> = mutableStateOf(null),
     val apkFailedToParse: MutableState<Boolean> = mutableStateOf(false),
+    val isSystemApp: MutableState<Boolean> = mutableStateOf(false),
     val internalDatabaseInfo: MutableState<InternalDatabaseInfo> = mutableStateOf(
         InternalDatabaseInfo(
             InternalDatabaseStatus.NOT_FOUND,
@@ -26,18 +27,10 @@ class InternalDatabaseInfo(
     val sources: List<Source>
 )
 
-enum class InternalDatabaseStatus(val info: String) {
-    NOT_FOUND(
-        "This app was not found in the internal database. You can open a pre-filled GitHub submission " +
-            "using the button below.",
-    ),
-    MATCH(
-        "This app's verification info matches an entry in the internal database. You don't need to verify normally.",
-    ),
-    NOMATCH(
-        "This app was found in the internal database, but its hash did NOT match. This app may be " +
-            "non-genuine.",
-    ),
+enum class InternalDatabaseStatus {
+    NOT_FOUND,
+    MATCH,
+    NOMATCH,
 }
 
 data class Hashes(

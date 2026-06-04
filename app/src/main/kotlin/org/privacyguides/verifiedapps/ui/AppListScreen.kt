@@ -97,6 +97,7 @@ fun AppListScreen(
         hash: Hashes,
         icon: Drawable,
         internalDatabaseInfo: InternalDatabaseInfo,
+        isSystemApp: Boolean,
     ) -> Unit,
     onQueryChange: (query: String) -> Unit,
     onSearch: (query: String) -> Unit,
@@ -430,12 +431,14 @@ fun AppListScreen(
                             visibleEntries = userVisibleEntries,
                             isLoading = appListUiState.isLoadingUser && userVisibleEntries.isEmpty(),
                             packageManager = packageManager,
+                            isSystemApp = false,
                             onClickAppItem = onClickAppItem,
                         )
                         else -> AppListEntriesBody(
                             visibleEntries = systemVisibleEntries,
                             isLoading = appListUiState.isLoadingSystem && systemVisibleEntries.isEmpty(),
                             packageManager = packageManager,
+                            isSystemApp = true,
                             onClickAppItem = onClickAppItem,
                         )
                     }
@@ -446,6 +449,7 @@ fun AppListScreen(
                     visibleEntries = userVisibleEntries,
                     isLoading = appListUiState.isLoadingUser && userVisibleEntries.isEmpty(),
                     packageManager = packageManager,
+                    isSystemApp = false,
                     onClickAppItem = onClickAppItem,
                 )
             }
@@ -458,12 +462,14 @@ private fun AppListEntriesBody(
     visibleEntries: List<AppListEntry>,
     isLoading: Boolean,
     packageManager: PackageManager,
+    isSystemApp: Boolean,
     onClickAppItem: (
         name: String,
         packageName: String,
         hash: Hashes,
         icon: Drawable,
         internalDatabaseInfo: InternalDatabaseInfo,
+        isSystemApp: Boolean,
     ) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -515,6 +521,7 @@ private fun AppListEntriesBody(
                             entry.hashes,
                             AppIconCache.get(packageManager, entry.packageName),
                             entry.internalDatabaseInfo,
+                            isSystemApp,
                         )
                     },
                     leadingContent = {

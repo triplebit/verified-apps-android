@@ -83,6 +83,7 @@ fun VerifyAppScreen(
     showSharingTools: Boolean,
     alwaysShowGitHubSubmit: Boolean,
     showCodebergSubmit: Boolean,
+    isSystemApp: Boolean,
 ) {
     val context = LocalContext.current
     val verticalScroll = rememberScrollState()
@@ -222,10 +223,13 @@ fun VerifyAppScreen(
                             )
                         }
                     }
-                    val showGitHubSubmit =
+                    val showGitHubSubmit = if (isSystemApp) {
+                        alwaysShowGitHubSubmit
+                    } else {
                         databaseStatus == InternalDatabaseStatus.NOT_FOUND ||
                             databaseStatus == InternalDatabaseStatus.NOMATCH ||
                             alwaysShowGitHubSubmit
+                    }
                     if (showGitHubSubmit) {
                         val clipboardManager = LocalClipboardManager.current
                         val verificationData =
@@ -355,7 +359,7 @@ fun VerifyAppScreen(
             text = {
                 LazyColumn {
                     item {
-                        Text(internalDatabaseInfo.internalDatabaseStatus.info)
+                        Text(stringResource(internalDatabaseInfo.internalDatabaseStatus.infoRes()))
                     }
                     item {
                         if (internalDatabaseInfo.internalDatabaseStatus == InternalDatabaseStatus.MATCH) {

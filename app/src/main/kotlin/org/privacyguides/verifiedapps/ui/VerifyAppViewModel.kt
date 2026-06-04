@@ -32,11 +32,13 @@ class VerifyAppViewModel(application: Application) : AndroidViewModel(applicatio
         packageName: String,
         hashes: Hashes,
         internalDatabaseInfo: InternalDatabaseInfo,
+        isSystemApp: Boolean = false,
     ) {
         _uiState.value.name.value = name
         _uiState.value.packageName.value = packageName
         _uiState.value.hashes.value = hashes
         _uiState.value.internalDatabaseInfo.value = internalDatabaseInfo
+        _uiState.value.isSystemApp.value = isSystemApp
     }
 
     fun setAppIcon(icon: Drawable) {
@@ -148,6 +150,7 @@ class VerifyAppViewModel(application: Application) : AndroidViewModel(applicatio
                 packageName,
                 hashes,
                 getInternalDatabaseInfoFromVerificationInfo(VerificationInfo(packageName, hashes)),
+                isSystemApp = packageManager.isInstalledSystemPackage(packageName),
             )
             setAppIcon(packageManager.getApplicationIcon(applicationInfo))
 
@@ -161,5 +164,8 @@ class VerifyAppViewModel(application: Application) : AndroidViewModel(applicatio
             }
         }
     }
-
 }
+
+private fun PackageManager.isInstalledSystemPackage(packageName: String): Boolean =
+    getInstalledPackages(PackageManager.MATCH_SYSTEM_ONLY)
+        .any { it.packageName == packageName }

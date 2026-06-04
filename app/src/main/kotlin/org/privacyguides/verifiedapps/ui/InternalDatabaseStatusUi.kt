@@ -19,6 +19,13 @@ fun InternalDatabaseStatus.labelRes(): Int = when (this) {
     InternalDatabaseStatus.NOT_FOUND -> R.string.app_list_status_unknown
 }
 
+@StringRes
+fun InternalDatabaseStatus.infoRes(): Int = when (this) {
+    InternalDatabaseStatus.NOT_FOUND -> R.string.internal_database_status_not_found_info
+    InternalDatabaseStatus.MATCH -> R.string.internal_database_status_match_info
+    InternalDatabaseStatus.NOMATCH -> R.string.internal_database_status_nomatch_info
+}
+
 fun InternalDatabaseStatus.statusIcon(): ImageVector = when (this) {
     InternalDatabaseStatus.MATCH -> Icons.Default.CheckCircle
     InternalDatabaseStatus.NOMATCH -> Icons.Default.Error
