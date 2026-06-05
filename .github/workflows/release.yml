@@ -19,8 +19,10 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
+    outputs:
+      path: ${{ steps.apk.outputs.path }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -91,10 +93,34 @@ jobs:
           cp "$APK" "$ASSET"
           echo "path=${ASSET}" >> "$GITHUB_OUTPUT"
 
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
+  attest:
+    needs: build
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    uses: privacyguides/.github/.github/workflows/sign-artifact.yml@5c41b37a937aab5e50262f3ab672fc9b9438dbf9
+    with:
+      artifact-name: built-apk
+      artifact-path: ${{ needs.build.outputs.path }}
+
+  release:
+    needs: attest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v8
         with:
-          tag_name: ${{ github.ref_name }}
-          files: ${{ steps.apk.outputs.path }}
+          name: built-apk
+
+      - name: Create release notes
+        id: release
+        uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd
+        with:
+          artifacts: "data.yml"
           draft: true
-          prerelease: false
+          prerelease: true

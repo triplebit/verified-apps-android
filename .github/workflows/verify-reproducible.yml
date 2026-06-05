@@ -1,0 +1,129 @@
+# From https://github.com/RoundSalmon4/AppVerifierBG/blob/feature/all-enhancements/.github/workflows/verify-reproducible.yml
+
+name: Verify Reproducible Build
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to verify (nightly-YYYY-MM-DD or vX.Y.Z). Leave blank for latest.'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [ -z "${{ github.event.inputs.tag }}" ]; then
+            TAG=$(curl -sL \
+              -H "Authorization: Bearer ${{ github.token }}" \
+              "https://api.github.com/repos/${{ github.repository }}/releases?per_page=1" \
+              | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['tag_name'])" 2>/dev/null || true)
+            if [ -z "$TAG" ]; then
+              echo "error=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: List recent releases
+        run: |
+          echo "Recent releases:"
+          curl -sL \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases?per_page=5" \
+            | python3 -c "
+          import sys, json
+          for r in json.load(sys.stdin):
+            print(f'  {r[\"tag_name\"]}')
+          "
+
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.tag.outputs.tag }}
+
+      - name: Download original release APK
+        run: |
+          gh release download "${{ steps.tag.outputs.tag }}" \
+            --repo ${{ github.repository }} \
+            --pattern '*.apk' \
+            --dir /tmp/original
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          java-version: 17
+          distribution: temurin
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Gradle cache
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Grant execute permission to gradlew
+        run: chmod +x gradlew
+
+      - name: Generate debug keystore
+        run: |
+          mkdir -p "$HOME/.android"
+          keytool -genkey -v -keystore "$HOME/.android/debug.keystore" \
+            -storepass android -alias androiddebugkey -keypass android \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US" 2>&1
+
+      - name: Rebuild APK from tag
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          if [[ "$TAG" == nightly-* ]]; then
+            SUFFIX=-nightly-$(echo "$TAG" | sed 's/^nightly-//')
+            SOURCE_DATE_EPOCH=$(git log -1 --format=%ct) \
+              ./gradlew assembleRelease -PversionSuffix="$SUFFIX" --rerun-tasks
+          elif [[ "$TAG" == v* ]]; then
+            VERSION="${TAG#v}"
+            SOURCE_DATE_EPOCH=$(git log -1 --format=%ct) \
+              ./gradlew assembleRelease -PversionOverride="$VERSION" --rerun-tasks
+          else
+            echo "Unrecognized tag format: $TAG (expected nightly-* or v*)"
+            exit 1
+          fi
+
+      - name: Compare APKs
+        run: |
+          set -x
+          ORIGINAL=$(ls /tmp/original/*.apk 2>/dev/null || true)
+          REBUILT=$(ls app/build/outputs/apk/release/*.apk 2>/dev/null || true)
+          if [ -z "$ORIGINAL" ] || [ -z "$REBUILT" ]; then
+            echo "Missing APK files" >&2
+            echo "## Verify Result - ERROR" >> "$GITHUB_STEP_SUMMARY"
+            echo "Missing original or rebuilt APK" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          RESULT=$(python3 .github/scripts/compare_apks.py "$ORIGINAL" "$REBUILT")
+          echo "$RESULT"
+          {
+            echo "## Verify Result"
+            echo ""
+            echo "**Tag:** ${{ steps.tag.outputs.tag }}"
+            echo ""
+            echo "**Original:** $(basename "$ORIGINAL") ($(stat --format=%s "$ORIGINAL") bytes)"
+            echo "**Rebuilt:**  $(basename "$REBUILT") ($(stat --format=%s "$REBUILT") bytes)"
+            echo ""
+            echo '```'
+            echo "$RESULT"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if echo "$RESULT" | grep -q "All non-signature files match"; then
+            echo "### ✅ Reproducible — all non-signature files match!" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### ❌ NOT reproducible — files differ" >> "$GITHUB_STEP_SUMMARY"
+          fi
