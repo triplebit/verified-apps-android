@@ -73,14 +73,6 @@ jobs:
       - name: Grant execute permission to gradlew
         run: chmod +x gradlew
 
-      - name: Generate debug keystore
-        run: |
-          mkdir -p "$HOME/.android"
-          keytool -genkey -v -keystore "$HOME/.android/debug.keystore" \
-            -storepass android -alias androiddebugkey -keypass android \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=Android Debug,O=Android,C=US" 2>&1
-
       - name: Rebuild APK from tag
         run: |
           TAG="${{ steps.tag.outputs.tag }}"
