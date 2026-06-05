@@ -1,0 +1,47 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- top green trapezoid -->
+    <group
+        android:scaleX="0.07233146"
+        android:scaleY="0.06758840"
+        android:translateX="8.584454"
+        android:translateY="16.588034">
+        <path
+            android:fillColor="#00CEA4"
+            android:pathData="M888,454L367,454L497.25,210L757.75,210L888,454Z" />
+    </group>
+    <!-- bottom green trapezoid (inverted) -->
+    <group
+        android:scaleX="0.07233146"
+        android:scaleY="-0.06254892"
+        android:translateX="8.584454"
+        android:translateY="74.766244">
+        <path
+            android:fillColor="#00CEA4"
+            android:pathData="M888,454L367,454L497.25,210L757.75,210L888,454Z" />
+    </group>
+    <!-- green ribbon tail -->
+    <group
+        android:scaleX="0.07233146"
+        android:scaleY="0.07233146"
+        android:translateX="16.938737"
+        android:translateY="16.966292">
+        <path
+            android:fillColor="#00CEA4"
+            android:pathData="M352,644L680,644L680,793L352,793Z" />
+    </group>
+    <!-- dark shield + lock + checkmark -->
+    <group
+        android:scaleX="0.06130952"
+        android:scaleY="0.06130952"
+        android:translateX="24.543874"
+        android:translateY="82.202381">
+        <path
+            android:fillColor="#28323E"
+            android:fillType="evenOdd"
+            android:pathData="M240,-40L240,-369L110,-580L295,-880L665,-880L850,-580L720,-369L720,-40L480,-120L240,-40ZM320,-151L480,-204L640,-151L640,-280L320,-280L320,-151ZM340,-800L204,-580L340,-360L620,-360L756,-580L620,-800L340,-800ZM438,-417L296,-558L353,-615L438,-530L607,-700L664,-644L438,-417ZM320,-280L640,-280L320,-280Z" />
+    </group>
+</vector>

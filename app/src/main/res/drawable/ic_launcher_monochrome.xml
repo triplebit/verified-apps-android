@@ -3,12 +3,13 @@
     android:height="108dp"
     android:viewportWidth="960"
     android:viewportHeight="960">
-  <group android:scaleX="0.54189473"
-      android:scaleY="0.54189473"
-      android:translateX="219.89053"
-      android:translateY="207.84842">
-    <path
-        android:pathData="M240,920v-329L110,380l185,-300h370l185,300 -130,211v329l-240,-80 -240,80ZM320,809 L480,756 640,809v-129L320,680v129ZM340,160L204,380l136,220h280l136,-220 -136,-220L340,160ZM438,543L296,402l57,-57 85,85 169,-170 57,56 -226,227ZM320,680h320,-320Z"
-        android:fillColor="#000000"/>
-  </group>
+    <group
+        android:scaleX="0.54497354"
+        android:scaleY="0.54497354"
+        android:translateX="218.186243"
+        android:translateY="730.687831">
+        <path
+            android:fillColor="#000000"
+            android:pathData="M240,-40v-329L110,-580l185,-300h370l185,300-130,211v329l-240,-80-240,80Zm80,-111l160,-53 160,53v-129H320v129ZM340,-800L204,-580l136,220h280l136,-220-136,-220H340Zm98,383L296,-558l57,-57 85,85 169,-170 57,56-226,227ZM320,-280h320-320Z" />
+    </group>
 </vector>

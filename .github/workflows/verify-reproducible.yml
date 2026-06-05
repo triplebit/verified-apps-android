@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'CalVer tag to verify (YY.MM.PATCH, e.g. 26.6.0). Leave blank for latest.'
+        description: 'CalVer tag to verify (YY.MM.PATCH, e.g. 26.6.1). Leave blank for latest.'
         required: false
         default: ''
 

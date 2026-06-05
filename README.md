@@ -70,7 +70,7 @@ This is a fork of [AppVerifier](https://github.com/soupslurpr/AppVerifier), but 
 ### App verifications & reliability
 
 > [!IMPORTANT]
-> We maintain and release this app and our dataset in good faith and on a best-effort basis. We are not committing to 100% security, immediate bug fixes, or comprehensive app coverage in our dataset. As always, you must consider your own threat model
+> We maintain and release this app and our dataset in good faith and on a best-effort basis. We are not committing to perfect security, immediate bug fixes, or comprehensive app coverage in our dataset. As always with security tools like this, you must consider your own threat model and plan accordingly. We cannot advise you personally on the appropriate security measures for your specific situation. Your use of this app is at your own risk, and you may not hold any contributors liable for any adverse events which may occur.
 
 Please note that **mismatch** results may not always indicate an illegitimate app. For example, if we only have the F-Droid version of an app in our database, and you downloaded the app from Google Play where Google signed it with their own certificate, then your app would not match our database and will be flagged.
 
