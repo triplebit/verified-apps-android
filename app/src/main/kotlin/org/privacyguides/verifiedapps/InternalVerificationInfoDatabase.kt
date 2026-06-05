@@ -5170,6 +5170,22 @@ val internalVerificationInfoDatabase = setOf(
         )
     ),
     InternalDatabaseVerificationInfo(
+        "com.sosauce.cutecalc",
+        listOf(
+            Hashes(
+                listOf(
+                    Source.DIRECT_APK_LINK,
+                    Source.FDROID,
+                    Source.FDROID_IZZYONDROID
+                ),
+                listOf(
+                    "FD:2D:95:CD:B3:48:B2:F1:AE:BE:DB:AB:87:9C:ED:73:73:85:EE:13:C3:05:A1:39:D6:58:0D:4C:F2:C0:D6:5A"
+                ),
+                false
+            )
+        )
+    ),
+    InternalDatabaseVerificationInfo(
         "com.spotify.music",
         listOf(
             Hashes(
