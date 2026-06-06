@@ -23,11 +23,13 @@ enum class Source(val displayName: String) {
     F_DROID_FDROID_STORCHP_DE("F-Droid (fdroid.storchp.de)"),
     F_DROID_GROBOX_DE("F-Droid (grobox.de)"),
     F_DROID_MOBILEAPP_BITWARDEN_COM("F-Droid (mobileapp.bitwarden.com)"),
+    F_DROID_PRIVACYGUIDES_GITHUB_IO("F-Droid (privacyguides.github.io)"),
     GITHUB("GitHub"),
     GITLAB("GitLab"),
     GOOGLE_PIXEL_OS("Google Pixel OS"),
     GOOGLE_PLAY_STORE("Google Play"),
     VERIFIED_APPS("Verified Apps"),
+    VERIFIED_DOMAIN("Verified Domain"),
     WEBSITE("App's Website"),
 }
 
@@ -4613,7 +4615,8 @@ val internalVerificationInfoDatabase = setOf(
         listOf(
             Hashes(
                 listOf(
-                    Source.DIRECT_APK_LINK
+                    Source.DIRECT_APK_LINK,
+                    Source.VERIFIED_DOMAIN
                 ),
                 listOf(
                     "1E:76:F1:A1:5C:BE:20:1F:0F:E2:6A:F2:7A:12:D9:1D:0D:34:81:FE:7D:CC:7D:89:E9:D2:05:69:30:F6:D5:A9"
@@ -9354,6 +9357,22 @@ val internalVerificationInfoDatabase = setOf(
                 ),
                 listOf(
                     "71:51:AE:6D:56:F1:56:E6:72:24:E7:CA:3F:9C:00:DA:6F:70:30:B6:6C:C8:44:3F:3B:B4:D3:F8:4E:EB:5C:95"
+                ),
+                false
+            )
+        )
+    ),
+    InternalDatabaseVerificationInfo(
+        "org.privacyguides.verifiedapps",
+        listOf(
+            Hashes(
+                listOf(
+                    Source.DIRECT_APK_LINK,
+                    Source.F_DROID_PRIVACYGUIDES_GITHUB_IO,
+                    Source.VERIFIED_DOMAIN
+                ),
+                listOf(
+                    "40:5C:6B:D2:CA:7C:3A:AE:8F:46:3C:6F:8B:55:BC:F0:DD:AC:43:1C:5E:D8:EA:FF:65:D1:06:C9:81:7A:20:7F"
                 ),
                 false
             )
