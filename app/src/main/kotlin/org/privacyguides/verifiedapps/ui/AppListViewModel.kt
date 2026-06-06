@@ -21,6 +21,7 @@ data class AppListUiState(
     val systemEntries: List<AppListEntry> = emptyList(),
     val isLoadingUser: Boolean = false,
     val isLoadingSystem: Boolean = false,
+    val isRefreshing: Boolean = false,
 )
 
 class AppListViewModel(application: Application) : AndroidViewModel(application) {
@@ -34,63 +35,113 @@ class AppListViewModel(application: Application) : AndroidViewModel(application)
     private var systemLoadStarted = false
 
     fun ensureUserEntriesLoaded(
-        userPackages: List<PackageInfo>,
         selfPackageName: String,
         getHashesFromPackageInfo: (PackageInfo) -> Hashes,
         getInternalDatabaseInfoFromVerificationInfo: (VerificationInfo) -> InternalDatabaseInfo,
     ) {
-        if (userLoadStarted || _uiState.value.userEntries.isNotEmpty()) return
+        if (userLoadStarted) return
         userLoadStarted = true
-        loadEntries(
-            packages = userPackages,
-            selfPackageName = selfPackageName,
-            getHashesFromPackageInfo = getHashesFromPackageInfo,
-            getInternalDatabaseInfoFromVerificationInfo = getInternalDatabaseInfoFromVerificationInfo,
-            setLoading = { _uiState.update { it.copy(isLoadingUser = true) } },
-            setEntries = { entries -> _uiState.update { it.copy(userEntries = entries, isLoadingUser = false) } },
-        )
-    }
-
-    fun ensureSystemEntriesLoaded(
-        systemPackages: List<PackageInfo>,
-        selfPackageName: String,
-        getHashesFromPackageInfo: (PackageInfo) -> Hashes,
-        getInternalDatabaseInfoFromVerificationInfo: (VerificationInfo) -> InternalDatabaseInfo,
-    ) {
-        if (systemLoadStarted || _uiState.value.systemEntries.isNotEmpty()) return
-        systemLoadStarted = true
-        loadEntries(
-            packages = systemPackages,
-            selfPackageName = selfPackageName,
-            getHashesFromPackageInfo = getHashesFromPackageInfo,
-            getInternalDatabaseInfoFromVerificationInfo = getInternalDatabaseInfoFromVerificationInfo,
-            setLoading = { _uiState.update { it.copy(isLoadingSystem = true) } },
-            setEntries = { entries -> _uiState.update { it.copy(systemEntries = entries, isLoadingSystem = false) } },
-        )
-    }
-
-    private fun loadEntries(
-        packages: List<PackageInfo>,
-        selfPackageName: String,
-        getHashesFromPackageInfo: (PackageInfo) -> Hashes,
-        getInternalDatabaseInfoFromVerificationInfo: (VerificationInfo) -> InternalDatabaseInfo,
-        setLoading: () -> Unit,
-        setEntries: (List<AppListEntry>) -> Unit,
-    ) {
         viewModelScope.launch {
-            setLoading()
+            _uiState.update { it.copy(isLoadingUser = true) }
             val entries = withContext(Dispatchers.Default) {
                 buildAppListEntries(
-                    packages = packages,
+                    packages = queryInstalledPackages().user,
                     packageManager = packageManager,
                     selfPackageName = selfPackageName,
                     getHashesFromPackageInfo = getHashesFromPackageInfo,
                     getInternalDatabaseInfoFromVerificationInfo = getInternalDatabaseInfoFromVerificationInfo,
                 )
             }
-            setEntries(entries)
+            _uiState.update { it.copy(userEntries = entries, isLoadingUser = false) }
         }
     }
+
+    fun ensureSystemEntriesLoaded(
+        selfPackageName: String,
+        getHashesFromPackageInfo: (PackageInfo) -> Hashes,
+        getInternalDatabaseInfoFromVerificationInfo: (VerificationInfo) -> InternalDatabaseInfo,
+    ) {
+        if (systemLoadStarted) return
+        systemLoadStarted = true
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingSystem = true) }
+            val entries = withContext(Dispatchers.Default) {
+                buildAppListEntries(
+                    packages = queryInstalledPackages().system,
+                    packageManager = packageManager,
+                    selfPackageName = selfPackageName,
+                    getHashesFromPackageInfo = getHashesFromPackageInfo,
+                    getInternalDatabaseInfoFromVerificationInfo = getInternalDatabaseInfoFromVerificationInfo,
+                )
+            }
+            _uiState.update { it.copy(systemEntries = entries, isLoadingSystem = false) }
+        }
+    }
+
+    /**
+     * Re-reads the set of installed packages and rebuilds the list entries. This lets newly
+     * installed (or removed) apps show up without restarting the app. The user list is always
+     * refreshed; the system list is only refreshed when it is being shown.
+     */
+    fun refresh(
+        showSystemApps: Boolean,
+        selfPackageName: String,
+        getHashesFromPackageInfo: (PackageInfo) -> Hashes,
+        getInternalDatabaseInfoFromVerificationInfo: (VerificationInfo) -> InternalDatabaseInfo,
+    ) {
+        if (_uiState.value.isRefreshing) return
+        // Mark both lists as loaded so the one-shot loaders don't race the refreshed data.
+        userLoadStarted = true
+        if (showSystemApps) systemLoadStarted = true
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true) }
+            val installed = withContext(Dispatchers.Default) { queryInstalledPackages() }
+            val userEntries = withContext(Dispatchers.Default) {
+                buildAppListEntries(
+                    packages = installed.user,
+                    packageManager = packageManager,
+                    selfPackageName = selfPackageName,
+                    getHashesFromPackageInfo = getHashesFromPackageInfo,
+                    getInternalDatabaseInfoFromVerificationInfo = getInternalDatabaseInfoFromVerificationInfo,
+                )
+            }
+            val systemEntries = if (showSystemApps) {
+                withContext(Dispatchers.Default) {
+                    buildAppListEntries(
+                        packages = installed.system,
+                        packageManager = packageManager,
+                        selfPackageName = selfPackageName,
+                        getHashesFromPackageInfo = getHashesFromPackageInfo,
+                        getInternalDatabaseInfoFromVerificationInfo = getInternalDatabaseInfoFromVerificationInfo,
+                    )
+                }
+            } else {
+                null
+            }
+            _uiState.update { state ->
+                state.copy(
+                    userEntries = userEntries,
+                    systemEntries = systemEntries ?: state.systemEntries,
+                    isRefreshing = false,
+                )
+            }
+        }
+    }
+
+    private fun queryInstalledPackages(): InstalledPackages {
+        val systemPackageNames = packageManager.getInstalledPackages(PackageManager.MATCH_SYSTEM_ONLY)
+            .mapTo(HashSet()) { it.packageName }
+        val allPackages = packageManager.getInstalledPackages(0)
+        return InstalledPackages(
+            user = allPackages.filter { it.packageName !in systemPackageNames },
+            system = allPackages.filter { it.packageName in systemPackageNames },
+        )
+    }
+
+    private data class InstalledPackages(
+        val user: List<PackageInfo>,
+        val system: List<PackageInfo>,
+    )
 }
 
 internal fun buildAppListEntries(

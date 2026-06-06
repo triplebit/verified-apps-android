@@ -28,6 +28,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
@@ -49,6 +50,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Tab
@@ -112,23 +114,6 @@ fun AppListScreen(
     val appListViewModel: AppListViewModel = viewModel()
     val appListUiState by appListViewModel.uiState.collectAsState()
 
-    val systemPackageNames = remember {
-        packageManager.getInstalledPackages(PackageManager.MATCH_SYSTEM_ONLY)
-            .mapTo(HashSet()) { it.packageName }
-    }
-
-    val allInstalledPackages = remember {
-        packageManager.getInstalledPackages(0)
-    }
-
-    val userPackages = remember(allInstalledPackages, systemPackageNames) {
-        allInstalledPackages.filter { it.packageName !in systemPackageNames }
-    }
-
-    val systemPackages = remember(allInstalledPackages, systemPackageNames) {
-        allInstalledPackages.filter { it.packageName in systemPackageNames }
-    }
-
     val coroutineScope = rememberCoroutineScope()
     val sortOrder = AppListSort.entries[sortOrdinal]
     var selectedAppListTab by rememberSaveable { mutableIntStateOf(AppListTab.User.ordinal) }
@@ -177,9 +162,8 @@ fun AppListScreen(
 
     val selfPackageName = context.packageName
 
-    LaunchedEffect(userPackages, getHashesFromPackageInfo, getInternalDatabaseInfoFromVerificationInfo) {
+    LaunchedEffect(getHashesFromPackageInfo, getInternalDatabaseInfoFromVerificationInfo) {
         appListViewModel.ensureUserEntriesLoaded(
-            userPackages = userPackages,
             selfPackageName = selfPackageName,
             getHashesFromPackageInfo = getHashesFromPackageInfo,
             getInternalDatabaseInfoFromVerificationInfo = getInternalDatabaseInfoFromVerificationInfo,
@@ -188,18 +172,25 @@ fun AppListScreen(
 
     LaunchedEffect(
         showSystemApps,
-        systemPackages,
         getHashesFromPackageInfo,
         getInternalDatabaseInfoFromVerificationInfo,
     ) {
         if (showSystemApps) {
             appListViewModel.ensureSystemEntriesLoaded(
-                systemPackages = systemPackages,
                 selfPackageName = selfPackageName,
                 getHashesFromPackageInfo = getHashesFromPackageInfo,
                 getInternalDatabaseInfoFromVerificationInfo = getInternalDatabaseInfoFromVerificationInfo,
             )
         }
+    }
+
+    val onRefresh: () -> Unit = {
+        appListViewModel.refresh(
+            showSystemApps = showSystemApps,
+            selfPackageName = selfPackageName,
+            getHashesFromPackageInfo = getHashesFromPackageInfo,
+            getInternalDatabaseInfoFromVerificationInfo = getInternalDatabaseInfoFromVerificationInfo,
+        )
     }
 
     val userVisibleEntries = remember(
@@ -430,6 +421,8 @@ fun AppListScreen(
                             modifier = Modifier.fillMaxSize(),
                             visibleEntries = userVisibleEntries,
                             isLoading = appListUiState.isLoadingUser && userVisibleEntries.isEmpty(),
+                            isRefreshing = appListUiState.isRefreshing,
+                            onRefresh = onRefresh,
                             packageManager = packageManager,
                             isSystemApp = false,
                             onClickAppItem = onClickAppItem,
@@ -438,6 +431,8 @@ fun AppListScreen(
                             modifier = Modifier.fillMaxSize(),
                             visibleEntries = systemVisibleEntries,
                             isLoading = appListUiState.isLoadingSystem && systemVisibleEntries.isEmpty(),
+                            isRefreshing = appListUiState.isRefreshing,
+                            onRefresh = onRefresh,
                             packageManager = packageManager,
                             isSystemApp = true,
                             onClickAppItem = onClickAppItem,
@@ -449,6 +444,8 @@ fun AppListScreen(
                     modifier = listPagerModifier,
                     visibleEntries = userVisibleEntries,
                     isLoading = appListUiState.isLoadingUser && userVisibleEntries.isEmpty(),
+                    isRefreshing = appListUiState.isRefreshing,
+                    onRefresh = onRefresh,
                     packageManager = packageManager,
                     isSystemApp = false,
                     onClickAppItem = onClickAppItem,
@@ -462,6 +459,8 @@ fun AppListScreen(
 private fun AppListEntriesBody(
     visibleEntries: List<AppListEntry>,
     isLoading: Boolean,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     packageManager: PackageManager,
     isSystemApp: Boolean,
     onClickAppItem: (
@@ -474,88 +473,97 @@ private fun AppListEntriesBody(
     ) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (isLoading) {
-        Column(
-            modifier = modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            CircularProgressIndicator()
-        }
-    } else if (visibleEntries.isEmpty()) {
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(horizontal = 32.dp, vertical = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Top),
-        ) {
-            Icon(
-                Icons.AutoMirrored.Filled.HelpOutline,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = stringResource(R.string.app_list_empty),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    } else {
-        LazyColumn(
-            modifier = modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                top = 8.dp,
-                bottom = 8.dp,
-            ),
-        ) {
-            items(visibleEntries, key = { it.packageName }) { entry ->
-                val status = entry.internalDatabaseInfo.internalDatabaseStatus
-                ListItem(
-                    modifier = Modifier.clickable {
-                        onClickAppItem(
-                            entry.name,
-                            entry.packageName,
-                            entry.hashes,
-                            AppIconCache.get(packageManager, entry.packageName),
-                            entry.internalDatabaseInfo,
-                            isSystemApp,
-                        )
-                    },
-                    leadingContent = {
-                        AppListItemIcon(
-                            packageName = entry.packageName,
-                            modifier = Modifier.size(48.dp),
-                        )
-                    },
-                    headlineContent = {
-                        Text(
-                            text = entry.name,
-                            style = MaterialTheme.typography.titleMediumEmphasized,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                    supportingContent = {
-                        Text(
-                            text = entry.packageName,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                    trailingContent = {
-                        Icon(
-                            imageVector = status.statusIcon(),
-                            contentDescription = stringResource(status.labelRes()),
-                            tint = status.contentColor(),
-                        )
-                    },
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize(),
+    ) {
+        if (isLoading) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+        } else if (visibleEntries.isEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 32.dp, vertical = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Top),
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.HelpOutline,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Text(
+                    text = stringResource(R.string.app_list_empty),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 8.dp,
+                    bottom = 8.dp,
+                ),
+            ) {
+                items(visibleEntries, key = { it.packageName }) { entry ->
+                    val status = entry.internalDatabaseInfo.internalDatabaseStatus
+                    ListItem(
+                        modifier = Modifier.clickable {
+                            onClickAppItem(
+                                entry.name,
+                                entry.packageName,
+                                entry.hashes,
+                                AppIconCache.get(packageManager, entry.packageName),
+                                entry.internalDatabaseInfo,
+                                isSystemApp,
+                            )
+                        },
+                        leadingContent = {
+                            AppListItemIcon(
+                                packageName = entry.packageName,
+                                modifier = Modifier.size(48.dp),
+                            )
+                        },
+                        headlineContent = {
+                            Text(
+                                text = entry.name,
+                                style = MaterialTheme.typography.titleMediumEmphasized,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        },
+                        supportingContent = {
+                            Text(
+                                text = entry.packageName,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        },
+                        trailingContent = {
+                            Icon(
+                                imageVector = status.statusIcon(),
+                                contentDescription = stringResource(status.labelRes()),
+                                tint = status.contentColor(),
+                            )
+                        },
+                    )
+                }
             }
         }
     }
