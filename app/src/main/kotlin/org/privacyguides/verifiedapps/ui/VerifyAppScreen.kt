@@ -4,7 +4,6 @@ package org.privacyguides.verifiedapps.ui
 
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 
-import android.app.ActivityOptions
 import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.Intent
@@ -42,18 +41,19 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipEntry
-import androidx.compose.ui.platform.ClipboardManager
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.Clipboard
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat.startActivity
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
+import kotlinx.coroutines.launch
 import org.privacyguides.verifiedapps.R
 import org.privacyguides.verifiedapps.data.Hashes
 import org.privacyguides.verifiedapps.data.InternalDatabaseInfo
@@ -79,6 +79,8 @@ fun VerifyAppScreen(
     isSystemApp: Boolean,
 ) {
     val context = LocalContext.current
+    val clipboard = LocalClipboard.current
+    val coroutineScope = rememberCoroutineScope()
     val verticalScroll = rememberScrollState()
     LaunchedEffect(Unit) {
         if (hashes.hashes.isEmpty()) {
@@ -268,7 +270,6 @@ fun VerifyAppScreen(
                             .padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        val clipboardManager = LocalClipboardManager.current
                         val verificationData =
                             GitHubAppSubmission.buildVerificationInfo(packageName, hashes)
                         when (databaseStatus) {
@@ -304,11 +305,13 @@ fun VerifyAppScreen(
                             Button(
                                 modifier = Modifier.fillMaxWidth(),
                                 onClick = {
-                                    copyVerificationInfoToClipboard(
-                                        context = context,
-                                        clipboardManager = clipboardManager,
-                                        verificationData = verificationData,
-                                    )
+                                    coroutineScope.launch {
+                                        copyVerificationInfoToClipboard(
+                                            context = context,
+                                            clipboard = clipboard,
+                                            verificationData = verificationData,
+                                        )
+                                    }
                                     val issueUri = CodebergAppSubmission.newIssueUri(
                                         packageName = packageName,
                                         appLabel = name,
@@ -325,7 +328,6 @@ fun VerifyAppScreen(
             }
 
             if (showSharingTools) {
-                val clipboardManager = LocalClipboardManager.current
                 val verificationData = GitHubAppSubmission.buildVerificationInfo(packageName, hashes)
                 val mimeType = "text/plain"
                 Column(
@@ -341,7 +343,7 @@ fun VerifyAppScreen(
                                 type = mimeType
                             }
                             val shareIntent = Intent.createChooser(sendIntent, null)
-                            startActivity(context, shareIntent, ActivityOptions.makeBasic().toBundle())
+                            context.startActivity(shareIntent)
                         },
                     ) {
                         Text("Share verification info")
@@ -349,8 +351,10 @@ fun VerifyAppScreen(
                     OutlinedButton(
                         modifier = Modifier.fillMaxWidth(),
                         onClick = {
-                            val clip = ClipData.newPlainText(mimeType, verificationData)
-                            clipboardManager.setClip(ClipEntry(clip))
+                            coroutineScope.launch {
+                                val clip = ClipData.newPlainText(mimeType, verificationData)
+                                clipboard.setClipEntry(ClipEntry(clip))
+                            }
                         },
                     ) {
                         Text("Copy verification info")
@@ -364,13 +368,13 @@ fun VerifyAppScreen(
     }
 }
 
-private fun copyVerificationInfoToClipboard(
+private suspend fun copyVerificationInfoToClipboard(
     context: android.content.Context,
-    clipboardManager: ClipboardManager,
+    clipboard: Clipboard,
     verificationData: String,
 ) {
     val clip = ClipData.newPlainText("text/plain", verificationData)
-    clipboardManager.setClip(ClipEntry(clip))
+    clipboard.setClipEntry(ClipEntry(clip))
     Toast.makeText(
         context,
         context.getString(R.string.verification_info_copied_toast),
@@ -381,7 +385,7 @@ private fun copyVerificationInfoToClipboard(
 private fun openGitHubSubmission(context: android.content.Context, issueUri: Uri) {
     val intent = Intent(Intent.ACTION_VIEW, issueUri)
     try {
-        startActivity(context, intent, ActivityOptions.makeBasic().toBundle())
+        context.startActivity(intent)
     } catch (_: ActivityNotFoundException) {
         Toast.makeText(
             context,
@@ -394,7 +398,7 @@ private fun openGitHubSubmission(context: android.content.Context, issueUri: Uri
 private fun openCodebergSubmission(context: android.content.Context, issueUri: Uri) {
     val intent = Intent(Intent.ACTION_VIEW, issueUri)
     try {
-        startActivity(context, intent, ActivityOptions.makeBasic().toBundle())
+        context.startActivity(intent)
     } catch (_: ActivityNotFoundException) {
         Toast.makeText(
             context,

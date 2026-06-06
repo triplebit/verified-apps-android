@@ -1,7 +1,15 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose") version "2.2.10"
+}
+
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+tasks.withType<KotlinCompile>().configureEach {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+    }
 }
 
 android {
@@ -17,7 +25,7 @@ android {
         // CalVer YY.MM.PATCH (e.g. 26.6.0). versionCode = YY*1_000_000 + MM*10_000 + PATCH.
         val releaseVersionYear = 26
         val releaseVersionMonth = 6
-        val releaseVersionPatch = 2
+        val releaseVersionPatch = 3
         versionCode = releaseVersionYear * 1_000_000 + releaseVersionMonth * 10_000 + releaseVersionPatch
         versionName = "${releaseVersionYear}.${releaseVersionMonth}.${releaseVersionPatch}"
 
@@ -34,9 +42,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        jvmTarget = "17"
     }
     buildFeatures {
         compose = true

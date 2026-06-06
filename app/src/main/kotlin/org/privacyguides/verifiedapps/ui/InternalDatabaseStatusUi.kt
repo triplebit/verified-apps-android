@@ -4,7 +4,7 @@ import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -29,7 +29,7 @@ fun InternalDatabaseStatus.infoRes(): Int = when (this) {
 fun InternalDatabaseStatus.statusIcon(): ImageVector = when (this) {
     InternalDatabaseStatus.MATCH -> Icons.Default.CheckCircle
     InternalDatabaseStatus.NOMATCH -> Icons.Default.Error
-    InternalDatabaseStatus.NOT_FOUND -> Icons.Default.HelpOutline
+    InternalDatabaseStatus.NOT_FOUND -> Icons.AutoMirrored.Filled.HelpOutline
 }
 
 @Composable

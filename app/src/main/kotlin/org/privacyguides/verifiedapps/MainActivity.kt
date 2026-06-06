@@ -14,6 +14,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.core.content.IntentCompat
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
@@ -43,7 +44,11 @@ class MainActivity : ComponentActivity() {
                 (intent.action == Intent.ACTION_VIEW)
 
             if (isActionSend) {
-                val extraStream: Uri? = intent.getParcelableExtra(Intent.EXTRA_STREAM)
+                val extraStream: Uri? = IntentCompat.getParcelableExtra(
+                    intent,
+                    Intent.EXTRA_STREAM,
+                    Uri::class.java,
+                )
 
                 if (extraStream != null) {
                     verifyAppViewModel.setApkVerificationInfoAndInternalDatabaseStatusFromUri(

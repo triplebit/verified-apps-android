@@ -65,7 +65,7 @@ import org.privacyguides.verifiedapps.ui.PrivacyPolicyScreen
 import org.privacyguides.verifiedapps.ui.VerifyAppScreen
 import org.privacyguides.verifiedapps.ui.VerifyAppViewModel
 
-enum class AppVerifierScreens(@StringRes val title: Int) {
+enum class AppVerifierScreens(@param:StringRes val title: Int) {
     MainTabs(title = R.string.app_name),
     VerifyApp(title = R.string.verify_app),
     License(title = R.string.license),

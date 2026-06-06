@@ -11,7 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -660,7 +660,7 @@ fun CreditsScreen(onNavigateUp: () -> Unit) {
                             imageVector = if (expanded) {
                                 Icons.Filled.KeyboardArrowDown
                             } else {
-                                Icons.Filled.KeyboardArrowRight
+                                Icons.AutoMirrored.Filled.KeyboardArrowRight
                             },
                             contentDescription = if (expanded) {
                                 "Collapse ${entry.name} license"
