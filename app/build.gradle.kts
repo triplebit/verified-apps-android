@@ -59,6 +59,7 @@ android {
                 keyAlias = System.getenv("ANDROID_KEY_ALIAS")
                 keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
             }
+            enableV3Signing = true
             enableV4Signing = true
         }
     }
