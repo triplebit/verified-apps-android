@@ -1,0 +1,149 @@
+name: Sync Release to Codeberg
+
+on:
+  release:
+    types:
+      - published
+      - released
+      - edited
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing GitHub release tag to mirror to Codeberg
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeberg-release-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Mirror release to Codeberg
+    runs-on: ubuntu-latest
+    # Drafts stay GitHub-only; only mirror real (published) releases.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.release.draft == false
+
+    steps:
+      - name: Mirror GitHub release to Codeberg
+        env:
+          CB_SYNC_TOKEN: ${{ secrets.CB_SYNC_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+          CODEBERG_API_BASE: https://codeberg.org/api/v1
+          CODEBERG_OWNER: privacyguides
+          CODEBERG_REPO: verified-apps-android
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${CB_SYNC_TOKEN:-}" ]]; then
+            echo "CB_SYNC_TOKEN is not configured." >&2
+            exit 1
+          fi
+          if [[ -z "${RELEASE_TAG:-}" ]]; then
+            echo "No release tag to sync." >&2
+            exit 1
+          fi
+
+          # Forgejo API call with auth headers. Writes the response body to $API_BODY and
+          # prints the HTTP status code on stdout.
+          API_BODY="$(mktemp)"
+          trap 'rm -f "$API_BODY"' EXIT
+          api() {
+            curl -sS -o "$API_BODY" -w '%{http_code}' \
+              -H "Authorization: token ${CB_SYNC_TOKEN}" \
+              -H "Accept: application/json" \
+              "$@"
+          }
+
+          urlencode() { jq -rn --arg x "$1" '$x | @uri'; }
+
+          base="${CODEBERG_API_BASE}/repos/${CODEBERG_OWNER}/${CODEBERG_REPO}"
+
+          # --- Read the GitHub release (source of truth) ----------------------------
+          release_json=$(gh release view "$RELEASE_TAG" --repo "$GH_REPO" \
+            --json tagName,name,body,isDraft,isPrerelease)
+
+          if [[ "$(jq -r '.isDraft' <<<"$release_json")" == "true" ]]; then
+            echo "GitHub release $RELEASE_TAG is a draft; drafts stay GitHub-only. Skipping."
+            exit 0
+          fi
+
+          rel_name=$(jq -r '.name // ""' <<<"$release_json")
+          rel_body=$(jq -r '.body // ""' <<<"$release_json")
+          rel_prerelease=$(jq -r '.isPrerelease' <<<"$release_json")
+          [[ -n "$rel_name" ]] || rel_name="$RELEASE_TAG"
+
+          # Commit the tag points at, so Forgejo can create the tag if the git mirror has
+          # not pushed it yet. Ignored by Forgejo when the tag already exists on Codeberg.
+          target_sha=$(gh api "repos/${GH_REPO}/commits/${RELEASE_TAG}" --jq '.sha' 2>/dev/null || true)
+
+          # --- Find or create the Codeberg release ----------------------------------
+          http=$(api "${base}/releases/tags/$(urlencode "$RELEASE_TAG")")
+          case "$http" in
+            200) release_id=$(jq -r '.id' "$API_BODY") ;;
+            404) release_id="" ;;
+            *) echo "Codeberg get-release-by-tag failed (HTTP $http):" >&2; cat "$API_BODY" >&2; exit 1 ;;
+          esac
+
+          if [[ -n "$release_id" && "$release_id" != "null" ]]; then
+            echo "Codeberg release for $RELEASE_TAG already exists (id $release_id); leaving metadata untouched."
+          else
+            payload=$(jq -n \
+              --arg tag "$RELEASE_TAG" \
+              --arg name "$rel_name" \
+              --arg body "$rel_body" \
+              --argjson prerelease "$rel_prerelease" \
+              --arg target "$target_sha" \
+              '{tag_name: $tag, name: $name, body: $body, draft: false, prerelease: $prerelease}
+                + (if $target != "" then {target_commitish: $target} else {} end)')
+            http=$(api -X POST -H "Content-Type: application/json" \
+              --data-binary "$payload" "${base}/releases")
+            if [[ "$http" != "201" ]]; then
+              echo "Codeberg create-release failed (HTTP $http):" >&2
+              cat "$API_BODY" >&2
+              exit 1
+            fi
+            release_id=$(jq -r '.id' "$API_BODY")
+            echo "Created Codeberg release for $RELEASE_TAG (id $release_id)."
+          fi
+
+          # --- Download GitHub assets (uploaded files only, no source archives) ------
+          mkdir -p release-assets
+          gh release download "$RELEASE_TAG" --repo "$GH_REPO" --dir release-assets --clobber \
+            || echo "No downloadable assets on the GitHub release; nothing to upload."
+
+          # --- Upload assets not already attached (create-only) ---------------------
+          http=$(api "${base}/releases/${release_id}/assets")
+          if [[ "$http" != "200" ]]; then
+            echo "Codeberg list-release-assets failed (HTTP $http):" >&2
+            cat "$API_BODY" >&2
+            exit 1
+          fi
+          existing_names=$(jq -r '.[].name' "$API_BODY")
+
+          shopt -s nullglob
+          for file in release-assets/*; do
+            [[ -f "$file" ]] || continue
+            name=$(basename "$file")
+            if grep -Fxq -- "$name" <<<"$existing_names"; then
+              echo "Skipping $name: already attached to the Codeberg release."
+              continue
+            fi
+            echo "Uploading $name to Codeberg release $RELEASE_TAG."
+            http=$(api -X POST -F "attachment=@${file};filename=${name}" \
+              "${base}/releases/${release_id}/assets?name=$(urlencode "$name")")
+            if [[ "$http" != "201" ]]; then
+              echo "Codeberg upload-asset failed for $name (HTTP $http):" >&2
+              cat "$API_BODY" >&2
+              exit 1
+            fi
+          done
+
+          echo "Done syncing $RELEASE_TAG to Codeberg."

@@ -1,0 +1,26 @@
+name: Sync to Mirrors
+
+permissions:
+  contents: read
+
+on:
+  push:
+  delete:
+  create:
+  workflow_call:
+
+# Ensures that only one mirror task will run at a time.
+concurrency:
+  group: git-mirror
+
+jobs:
+  codeberg:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mirror to Codeberg
+        uses: wearerequired/git-mirror-action@c44c68aebe42de49a80a8dfd557416b6a0cafdad # v1.2.0
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.ACTIONS_SSH_KEY }}
+        with:
+          source-repo: "git@github.com:privacyguides/verified-apps-android.git"
+          destination-repo: "git@codeberg.org:privacyguides/verified-apps-android.git"
