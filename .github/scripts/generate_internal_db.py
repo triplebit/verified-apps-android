@@ -36,11 +36,31 @@ SOURCE_MAP = {
 
 SUPPORTED_SCHEMA_VERSIONS = {2, 3}
 
+# Validate package names and fingerprints against strict character sets.
+PACKAGE_RE = re.compile(r"[A-Za-z0-9_.]+")
+FINGERPRINT_RE = re.compile(r"[0-9A-Fa-f:]+")
+
 S4 = "    "
 S8 = "        "
 S12 = "            "
 S16 = "                "
 S20 = "                    "
+
+
+def kotlin_string_escape(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def validate_package(package: str) -> None:
+    if not PACKAGE_RE.fullmatch(package):
+        raise ValueError(f"Refusing to emit invalid package name from data.yml: {package!r}")
+
+
+def validate_fingerprint(fingerprint: str) -> None:
+    if not FINGERPRINT_RE.fullmatch(fingerprint):
+        raise ValueError(
+            f"Refusing to emit invalid signing fingerprint from data.yml: {fingerprint!r}"
+        )
 
 
 def source_name_to_enum(name: str) -> str:
@@ -135,7 +155,7 @@ def sources_for_signature(sig: dict, display_to_enum: dict[str, str]) -> list[st
 
 def format_hashes_block(sources: list[str], fingerprints: list[str]) -> str:
     source_lines = ",\n".join(f"{S20}{s}" for s in sources)
-    fp_lines = ",\n".join(f'{S20}"{fp}"' for fp in fingerprints)
+    fp_lines = ",\n".join(f'{S20}"{kotlin_string_escape(fp)}"' for fp in fingerprints)
     return (
         f"""{S12}Hashes(
 {S16}listOf(
@@ -151,6 +171,7 @@ def format_hashes_block(sources: list[str], fingerprints: list[str]) -> str:
 
 def format_entry(package: str, signatures: list, display_to_enum: dict[str, str]) -> str | None:
     """One data.yml signature entry becomes one Hashes block (order preserved per entry)."""
+    validate_package(package)
     hashes_blocks: list[str] = []
 
     for sig in signatures:
@@ -163,6 +184,8 @@ def format_entry(package: str, signatures: list, display_to_enum: dict[str, str]
             for line in raw_fingerprint.splitlines()
             if line.strip()
         ]
+        for fingerprint in fingerprints:
+            validate_fingerprint(fingerprint)
         kotlin_sources = sources_for_signature(sig, display_to_enum)
         if not fingerprints or not kotlin_sources:
             continue
@@ -175,7 +198,7 @@ def format_entry(package: str, signatures: list, display_to_enum: dict[str, str]
     joined = ",\n".join(hashes_blocks)
     return (
         f"{S4}InternalDatabaseVerificationInfo(\n"
-        f'{S8}"{package}",\n'
+        f'{S8}"{kotlin_string_escape(package)}",\n'
         f"{S8}listOf(\n"
         f"{joined}\n"
         f"{S8})\n"

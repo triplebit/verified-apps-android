@@ -1,7 +1,5 @@
 # Builds a signed release APK and publishes it to a GitHub Release.
 #
-# Triggers on push of a CalVer tag (e.g. 26.6.0).
-#
 # Required repository secrets:
 #   ANDROID_KEYSTORE_BASE64  — release keystore file, base64-encoded
 #   ANDROID_KEYSTORE_PASSWORD
@@ -39,6 +37,8 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        with:
+          validate-wrappers: true
 
       - name: Verify version matches tag
         env:
@@ -75,7 +75,9 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew :app:assembleRelease --no-daemon
+        # Pin SOURCE_DATE_EPOCH to the tag's commit time so the release build is
+        # byte-for-byte reproducible by verify-reproducible.yml.
+        run: SOURCE_DATE_EPOCH=$(git log -1 --format=%ct) ./gradlew :app:assembleRelease --no-daemon
 
       - name: Package release APK
         id: apk

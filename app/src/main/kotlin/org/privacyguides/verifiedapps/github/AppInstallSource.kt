@@ -82,7 +82,7 @@ object AppInstallSource {
         return APP_SOURCE_OTHER
     }
 
-    private fun mapInstaller(installerPackage: String?): String? {
+    internal fun mapInstaller(installerPackage: String?): String? {
         if (installerPackage.isNullOrBlank()) {
             return null
         }

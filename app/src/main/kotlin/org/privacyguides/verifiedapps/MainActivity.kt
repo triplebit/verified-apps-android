@@ -10,8 +10,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.content.IntentCompat
@@ -43,27 +47,27 @@ class MainActivity : ComponentActivity() {
             val isActionView =
                 (intent.action == Intent.ACTION_VIEW)
 
-            if (isActionSend) {
-                val extraStream: Uri? = IntentCompat.getParcelableExtra(
-                    intent,
-                    Intent.EXTRA_STREAM,
-                    Uri::class.java,
-                )
-
-                if (extraStream != null) {
-                    verifyAppViewModel.setApkVerificationInfoAndInternalDatabaseStatusFromUri(
-                        contentResolver,
-                        extraStream,
-                        packageManager
-                    )
-                }
-            } else if (isActionView) {
-                intent.data?.let {
-                    verifyAppViewModel.setApkVerificationInfoAndInternalDatabaseStatusFromUri(
-                        contentResolver,
-                        it,
-                        packageManager
-                    )
+            // Process the incoming APK only once now.
+            var intentHandled by rememberSaveable { mutableStateOf(false) }
+            LaunchedEffect(Unit) {
+                if (!intentHandled) {
+                    intentHandled = true
+                    val apkUri: Uri? = when {
+                        isActionSend -> IntentCompat.getParcelableExtra(
+                            intent,
+                            Intent.EXTRA_STREAM,
+                            Uri::class.java,
+                        )
+                        isActionView -> intent.data
+                        else -> null
+                    }
+                    if (apkUri != null) {
+                        verifyAppViewModel.setApkVerificationInfoAndInternalDatabaseStatusFromUri(
+                            contentResolver,
+                            apkUri,
+                            packageManager,
+                        )
+                    }
                 }
             }
 
