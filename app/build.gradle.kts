@@ -1,6 +1,6 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.plugin.compose") version "2.4.0"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.2.10"
     id("io.gitlab.arturbosch.detekt")
 }
 

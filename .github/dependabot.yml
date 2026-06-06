@@ -14,6 +14,10 @@ updates:
       compose-bom:
         patterns:
           - "androidx.compose:compose-bom"
+      kotlin:
+        patterns:
+          - "com.android.application"
+          - "org.jetbrains.kotlin.plugin.compose"
 
   - package-ecosystem: github-actions
     directory: /
