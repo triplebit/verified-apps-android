@@ -3308,6 +3308,20 @@ val internalVerificationInfoDatabase = setOf(
         )
     ),
     InternalDatabaseVerificationInfo(
+        "com.gpl.rpg.AndorsTrail",
+        listOf(
+            Hashes(
+                listOf(
+                    Source.FDROID
+                ),
+                listOf(
+                    "39:16:CB:37:00:F0:AB:8E:79:01:44:48:D0:00:42:9B:82:6A:59:E0:B4:36:4B:96:C9:4D:90:5A:65:59:D2:43"
+                ),
+                false
+            )
+        )
+    ),
+    InternalDatabaseVerificationInfo(
         "com.grindrapp.android",
         listOf(
             Hashes(
@@ -9789,6 +9803,22 @@ val internalVerificationInfoDatabase = setOf(
                 ),
                 listOf(
                     "A3:F1:9B:26:DA:3F:E1:2B:02:85:68:5F:6E:CC:41:51:5E:6A:9A:DC:C5:53:0B:47:C9:5D:84:7C:DA:E4:A7:E8"
+                ),
+                false
+            )
+        )
+    ),
+    InternalDatabaseVerificationInfo(
+        "org.joinmastodon.android.moshinda",
+        listOf(
+            Hashes(
+                listOf(
+                    Source.DIRECT_APK_LINK,
+                    Source.FDROID,
+                    Source.FDROID_IZZYONDROID
+                ),
+                listOf(
+                    "1D:D4:D6:DB:71:38:33:58:34:E3:92:7C:C7:45:AD:48:23:6A:BC:52:25:2B:BB:83:69:E9:6B:8B:BA:77:77:20"
                 ),
                 false
             )
