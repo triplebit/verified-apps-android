@@ -48,6 +48,11 @@ android {
         versionCode = releaseVersionYear * 1_000_000 + releaseVersionMonth * 10_000 + releaseVersionPatch
         versionName = "${releaseVersionYear}.${releaseVersionMonth}.${releaseVersionPatch}"
 
+        // Application label (Settings > Apps, task switcher). Default keeps the
+        // @string reference so the non-Play manifest is unchanged; the Play
+        // variant overrides it below.
+        manifestPlaceholders["appLabel"] = "@string/app_name"
+
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -115,6 +120,9 @@ android {
             if (playBuild) {
                 // -> org.privacyguides.verifiedapps.play
                 applicationIdSuffix = ".play"
+                // Distinguish the Play build in Settings/Play listing.
+                // Launcher label unchanged.
+                manifestPlaceholders["appLabel"] = "Verified Apps (Play Version)"
             }
         }
         getByName("debug") {
