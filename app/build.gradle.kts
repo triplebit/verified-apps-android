@@ -98,6 +98,11 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            // Bundle native debug symbols for the one .so we ship
+            // (libdatastore_shared_counter.so, pulled in by androidx.datastore)
+            ndk {
+                debugSymbolLevel = "FULL"
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
