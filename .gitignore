@@ -27,6 +27,10 @@ __pycache__
 play-service-account*.json
 *upload*.keystore
 
+# fastlane run artifacts
+fastlane/report.xml
+fastlane/README.md
+
 # SOPS / age — never commit plaintext secrets or private keys
 *.agekey
 age-key*.txt

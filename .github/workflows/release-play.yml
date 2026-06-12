@@ -47,9 +47,24 @@ on:
       asset_name:
         description: "Filename of the produced -play.aab (empty if skipped)."
         value: ${{ jobs.play.outputs.asset_name }}
+      uploaded:
+        description: "Whether the upload to Play succeeded ('false' when skipped or failed)."
+        value: ${{ jobs.play.outputs.uploaded }}
+    secrets:
+      SOPS_AGE_KEY:
+        description: "age key for secrets/google-play.yaml. Optional: absent means soft-skip."
+        required: false
 
 permissions:
   contents: read
+
+env:
+  # SHA-256 certificate fingerprint of the Play upload key (keytool format,
+  # colon-separated uppercase hex). Not a secret — pinned in plaintext so a
+  # wrong keystore in secrets/google-play.yaml fails the build instead of
+  # signing with an unintended key. Update when rotating the upload keystore;
+  # see secrets/README.md.
+  PLAY_UPLOAD_CERT_SHA256: "CHANGEME"
 
 jobs:
   play:
@@ -57,6 +72,7 @@ jobs:
     outputs:
       configured: ${{ steps.cfg.outputs.configured }}
       asset_name: ${{ steps.aab.outputs.name }}
+      uploaded: ${{ steps.upload.outcome == 'success' }}
     steps:
       - name: Resolve tag
         id: tag
@@ -74,6 +90,12 @@ jobs:
             echo "::error::No tag provided and no releases found."
             exit 1
           fi
+          # CalVer only: rejects arbitrary refs (this workflow runs with the
+          # Play secrets) and keeps the output single-line.
+          if ! [[ "$TAG" =~ ^[0-9]{2}\.[0-9]{1,2}\.[0-9]+$ ]]; then
+            echo "::error::Tag '${TAG}' is not a CalVer YY.MM.PATCH release tag."
+            exit 1
+          fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "Building Play artifacts for tag ${TAG}."
 
@@ -85,26 +107,49 @@ jobs:
       - name: Install sops
         run: bash scripts/ci/install-sops.sh
 
-      # Soft-skip gate when Play isn't configured. Pipes to grep for an exit
-      # code rather than capturing plaintext into a variable.
+      # Soft-skip gate when Play isn't configured: all values unpopulated means
+      # not configured, a partial set is a misconfiguration and fails here
+      # rather than mid-build. Pipes to grep for an exit code rather than
+      # capturing plaintext into a variable.
       - name: Check Play configuration
         id: cfg
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: |
-          sa_populated() {
+          populated() {
             # decryptable, non-empty, and not the CHANGEME placeholder
-            sops decrypt --extract '["PLAY_SERVICE_ACCOUNT_JSON"]' \
+            sops decrypt --extract "[\"$1\"]" \
               secrets/google-play.yaml 2>/dev/null | grep -q . || return 1
-            ! sops decrypt --extract '["PLAY_SERVICE_ACCOUNT_JSON"]' \
+            ! sops decrypt --extract "[\"$1\"]" \
               secrets/google-play.yaml 2>/dev/null | grep -qxF 'CHANGEME'
           }
           if [ -z "$SOPS_AGE_KEY" ] || [ ! -f secrets/google-play.yaml ]; then
             echo "::warning::SOPS_AGE_KEY or secrets/google-play.yaml missing; skipping Play build and upload."
             echo "configured=false" >> "$GITHUB_OUTPUT"
-          elif ! sa_populated; then
-            echo "::warning::PLAY_SERVICE_ACCOUNT_JSON not populated in secrets/google-play.yaml; skipping Play build and upload."
+            exit 0
+          fi
+          # A key that can't decrypt the file is an error, not "unconfigured".
+          if ! sops decrypt secrets/google-play.yaml > /dev/null 2>&1; then
+            echo "::error::Cannot decrypt secrets/google-play.yaml. Does SOPS_AGE_KEY match a recipient in .sops.yaml?"
+            exit 1
+          fi
+          KEYS="PLAY_SERVICE_ACCOUNT_JSON PLAY_UPLOAD_KEYSTORE_BASE64 \
+            PLAY_UPLOAD_KEYSTORE_PASSWORD PLAY_UPLOAD_KEY_ALIAS PLAY_UPLOAD_KEY_PASSWORD"
+          MISSING=""
+          PRESENT=0
+          for key in $KEYS; do
+            if populated "$key"; then
+              PRESENT=$((PRESENT + 1))
+            else
+              MISSING="${MISSING} ${key}"
+            fi
+          done
+          if [ "$PRESENT" -eq 0 ]; then
+            echo "::warning::secrets/google-play.yaml is unpopulated; skipping Play build and upload."
             echo "configured=false" >> "$GITHUB_OUTPUT"
+          elif [ -n "$MISSING" ]; then
+            echo "::error::secrets/google-play.yaml is partially populated; missing:${MISSING}. Populate every key or none."
+            exit 1
           else
             echo "configured=true" >> "$GITHUB_OUTPUT"
           fi
@@ -186,18 +231,63 @@ jobs:
             echo "::error::Play App Bundle is unsigned. Check the PLAY_UPLOAD_* values in secrets/google-play.yaml."
             exit 1
           fi
+          # jarsigner only proves *a* valid signature; pin the signer to the
+          # intended upload key so a wrong keystore in the secrets store can't
+          # publish (or, on a first upload, enroll) under the wrong identity.
+          ACTUAL=$(keytool -printcert -jarfile "$AAB" | awk '/SHA256:/ { print $2; exit }')
+          if [ -z "$ACTUAL" ]; then
+            echo "::error::Could not read the signer certificate from ${AAB}."
+            exit 1
+          fi
+          if [ "$PLAY_UPLOAD_CERT_SHA256" = "CHANGEME" ]; then
+            echo "::error::PLAY_UPLOAD_CERT_SHA256 is not pinned in release-play.yml. This bundle's signer is ${ACTUAL}; verify it against the upload keystore (keytool -list -v) before pinning."
+            exit 1
+          fi
+          if [ "$ACTUAL" != "$PLAY_UPLOAD_CERT_SHA256" ]; then
+            echo "::error::Bundle signer ${ACTUAL} does not match the pinned upload certificate ${PLAY_UPLOAD_CERT_SHA256}."
+            exit 1
+          fi
           AAB_ASSET="VerifiedApps-${TAG}-play.aab"
           cp "$AAB" "$AAB_ASSET"
           echo "name=${AAB_ASSET}" >> "$GITHUB_OUTPUT"
 
-      - name: Upload App Bundle to Google Play
+      # Lets the upload lane treat an already-uploaded versionCode as success,
+      # so re-running a tag after a partial failure isn't rejected by Play.
+      - name: Compute version code
+        id: vc
         if: steps.cfg.outputs.configured == 'true'
+        run: |
+          CODE=$(awk '
+            /releaseVersionYear =/{ y=$NF }
+            /releaseVersionMonth =/{ m=$NF }
+            /releaseVersionPatch =/{ p=$NF; sub(/,.*/, "", p) }
+            END { if (y && m && p != "") printf "%d", y * 1000000 + m * 10000 + p }
+          ' app/build.gradle.kts)
+          if ! [[ "$CODE" =~ ^[0-9]+$ ]]; then
+            echo "::error::Could not derive versionCode from app/build.gradle.kts (got '${CODE}')."
+            exit 1
+          fi
+          echo "code=${CODE}" >> "$GITHUB_OUTPUT"
+          echo "versionCode ${CODE}"
+
+      # On dispatch a failure fails the run directly. When called from
+      # release.yml it must not block the GitHub release — the caller surfaces
+      # a failed upload through the `uploaded` output instead.
+      - name: Upload App Bundle to Google Play
+        id: upload
+        if: steps.cfg.outputs.configured == 'true'
+        continue-on-error: ${{ github.event_name != 'workflow_dispatch' }}
         env:
           PLAY_JSON_KEY_FILE: ${{ steps.secrets.outputs.json }}
           PLAY_AAB_PATH: app/build/outputs/bundle/release/app-release.aab
           PLAY_TRACK: ${{ inputs.track }}
           PLAY_RELEASE_STATUS: ${{ inputs.release_status }}
+          PLAY_VERSION_CODE: ${{ steps.vc.outputs.code }}
         run: bundle exec fastlane internal
+
+      - name: Remove decrypted Play secrets
+        if: always()
+        run: rm -f "${{ runner.temp }}/play-upload.keystore" "${{ runner.temp }}/play-service-account.json"
 
       - name: Upload Play App Bundle artifact
         if: steps.cfg.outputs.configured == 'true'

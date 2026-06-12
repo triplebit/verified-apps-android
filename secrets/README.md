@@ -55,6 +55,10 @@ which GitHub-compatible runners supply.
 ## Rotating
 
 - **A value:** `sops edit` + commit, and revoke the old value at its issuer.
+- **The Play upload keystore:** also update the pinned `PLAY_UPLOAD_CERT_SHA256`
+  fingerprint in [`release-play.yml`](../.github/workflows/release-play.yml)
+  (from `keytool -list -v -keystore <keystore>`, the certificate's SHA-256
+  line), and register the new upload key with Google Play beforehand.
 - **An age key:** add the new recipient to `.sops.yaml`, run
   `sops updatekeys --yes secrets/*.yaml`, update `SOPS_AGE_KEY` and the password
   manager, then remove the old recipient and `updatekeys` again.

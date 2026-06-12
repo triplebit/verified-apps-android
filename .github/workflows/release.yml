@@ -230,13 +230,15 @@ jobs:
         ${{ needs.build.outputs.path }}
         ${{ needs.build.outputs.idsig }}
 
-  # Play variant; soft-skips when Play isn't configured.
+  # Play variant; soft-skips when Play isn't configured. Scoped secrets, not
+  # `inherit`: the Play workflow only needs the SOPS key.
   play:
     needs: build
     uses: ./.github/workflows/release-play.yml
     with:
       tag: ${{ github.ref_name }}
-    secrets: inherit
+    secrets:
+      SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
 
   attest-play:
     needs: play
@@ -251,7 +253,16 @@ jobs:
       artifact-path: ${{ needs.play.outputs.asset_name }}
 
   release:
-    needs: [build, attest, play]
+    # attest-play must finish before the release publishes the AAB it covers
+    # (it's skipped, not failed, when Play isn't configured — hence the
+    # explicit result checks instead of plain `needs` semantics).
+    needs: [build, attest, play, attest-play]
+    if: >-
+      !cancelled() &&
+      needs.build.result == 'success' &&
+      needs.attest.result == 'success' &&
+      needs.play.result == 'success' &&
+      (needs.attest-play.result == 'success' || needs.attest-play.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -294,3 +305,25 @@ jobs:
           artifacts: ${{ steps.assets.outputs.artifacts }}
           immutableCreate: true
           prerelease: false
+
+  # The Play upload runs continue-on-error inside the play job so a Play API
+  # failure can't block the canonical GitHub release; this job is where that
+  # failure becomes visible.
+  play-upload-status:
+    needs: [play, release]
+    if: >-
+      !cancelled() &&
+      needs.release.result == 'success' &&
+      needs.play.outputs.configured == 'true'
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Check Play upload result
+        env:
+          UPLOADED: ${{ needs.play.outputs.uploaded }}
+        run: |
+          if [ "$UPLOADED" != "true" ]; then
+            echo "::error::The upload to Google Play failed. The GitHub release was published; retry the upload by dispatching the 'Build & Publish to Google Play' workflow for this tag."
+            exit 1
+          fi
+          echo "Play upload succeeded."

@@ -2,15 +2,34 @@
 #   ./gradlew :app:bundleRelease -PplayBuild=true
 #
 # Env: PLAY_JSON_KEY_FILE (set in Appfile), PLAY_AAB_PATH, PLAY_TRACK,
-# PLAY_RELEASE_STATUS (draft | completed | halted | inProgress).
+# PLAY_RELEASE_STATUS (draft | completed | halted | inProgress),
+# PLAY_VERSION_CODE (optional; skips the upload when already on Play).
 
 default_platform(:android)
 
 AAB_DEFAULT = "app/build/outputs/bundle/release/app-release.aab".freeze
+PLAY_TRACKS = %w[internal alpha beta production].freeze
 
 platform :android do
   desc "Upload the Play App Bundle (and matching changelog) to the internal track"
   lane :internal do
+    # Play rejects a versionCode it has already seen, so a re-run of the same
+    # tag treats "already uploaded" as success rather than an error.
+    code = ENV.fetch("PLAY_VERSION_CODE", "")
+    unless code.empty?
+      raise "PLAY_VERSION_CODE must be an integer, got #{code.inspect}" unless code.match?(/\A\d+\z/)
+      already_on_play = PLAY_TRACKS.any? do |track|
+        google_play_track_version_codes(track: track).include?(code.to_i)
+      rescue StandardError
+        # Track empty or never used; treat as "not uploaded there".
+        false
+      end
+      if already_on_play
+        UI.important("versionCode #{code} is already on Google Play; skipping upload.")
+        next
+      end
+    end
+
     upload_to_play_store(
       track: ENV.fetch("PLAY_TRACK", "internal"),
       aab: ENV.fetch("PLAY_AAB_PATH", AAB_DEFAULT),
