@@ -64,7 +64,7 @@ env:
   # wrong keystore in secrets/google-play.yaml fails the build instead of
   # signing with an unintended key. Update when rotating the upload keystore;
   # see secrets/README.md.
-  PLAY_UPLOAD_CERT_SHA256: "CHANGEME"
+  PLAY_UPLOAD_CERT_SHA256: "A8:8C:9D:24:0E:58:26:66:FB:E4:A0:E0:C1:A2:85:1A:84:F7:AE:21:5D:2F:95:52:65:94:0D:BE:39:B9:11:F3"
 
 jobs:
   play:
