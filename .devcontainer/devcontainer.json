@@ -4,9 +4,33 @@
 	"name": "Debian",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"build": {
-			// Path is relative to the devcontainer.json file.
-			"dockerfile": "Dockerfile"
-    }
+		// Path is relative to the devcontainer.json file.
+		"dockerfile": "Dockerfile"
+	},
+	"runArgs": [
+		"--cap-add=SYS_ADMIN",
+		"--security-opt=apparmor=unconfined",
+		"--security-opt=seccomp=unconfined"
+	],
+	// Local shell
+	"containerEnv": {
+    "SHELL": "/bin/bash"
+  },
+	"mounts": [
+		{
+			"source": "verified-apps-android-bashhistory",
+			"target": "/commandhistory",
+			"type": "volume"
+		},
+		{
+			"source": "${localEnv:HOME}${localEnv:USERPROFILE}/.config",
+			"target": "/home/vscode/.config",
+			"type": "bind"
+		}
+	],
+	"postCreateCommand": {
+		"Fix bash history permissions": "sudo chown -R $(whoami): /commandhistory"
+	}
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},

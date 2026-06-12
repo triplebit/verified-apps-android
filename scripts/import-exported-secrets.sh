@@ -54,7 +54,7 @@ check_keys android-signing.yaml \
 check_keys google-play.yaml \
   PLAY_SERVICE_ACCOUNT_JSON PLAY_UPLOAD_KEYSTORE_BASE64 \
   PLAY_UPLOAD_KEYSTORE_PASSWORD PLAY_UPLOAD_KEY_ALIAS PLAY_UPLOAD_KEY_PASSWORD
-check_keys codeberg.yaml ACTIONS_SSH_KEY CB_SYNC_TOKEN
+check_keys codeberg.yaml CB_SYNC_TOKEN
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
@@ -86,18 +86,6 @@ check_keystore android-signing.yaml ANDROID_KEYSTORE_BASE64 \
   ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS release
 check_keystore google-play.yaml PLAY_UPLOAD_KEYSTORE_BASE64 \
   PLAY_UPLOAD_KEYSTORE_PASSWORD PLAY_UPLOAD_KEY_ALIAS play-upload
-
-# --- mirror SSH key ----------------------------------------------------------
-echo
-extract codeberg.yaml ACTIONS_SSH_KEY > "$tmp/mirror_key"
-printf '\n' >> "$tmp/mirror_key" # ssh-keygen requires a trailing newline
-chmod 600 "$tmp/mirror_key"
-if ssh-keygen -y -f "$tmp/mirror_key" > "$tmp/mirror_key.pub" 2>/dev/null; then
-  echo "  ok: mirror SSH key parses; its public key (compare with the Codeberg deploy key):"
-  sed 's/^/      /' "$tmp/mirror_key.pub"
-else
-  echo "  warn: could not derive a public key from ACTIONS_SSH_KEY (passphrase-protected key?)"
-fi
 
 # --- service account JSON is JSON -------------------------------------------
 if extract google-play.yaml PLAY_SERVICE_ACCOUNT_JSON | jq -e .client_email >/dev/null 2>&1; then

@@ -11,7 +11,7 @@ Any runner with a checkout and that one key can build and publish.
 | --- | --- | --- |
 | `android-signing.yaml` | `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | `release.yml` (GitHub APK signing) |
 | `google-play.yaml` | `PLAY_SERVICE_ACCOUNT_JSON`, `PLAY_UPLOAD_KEYSTORE_BASE64`, `PLAY_UPLOAD_KEYSTORE_PASSWORD`, `PLAY_UPLOAD_KEY_ALIAS`, `PLAY_UPLOAD_KEY_PASSWORD` | `release-play.yml` |
-| `codeberg.yaml` | `ACTIONS_SSH_KEY`, `CB_SYNC_TOKEN` | `sync-mirrors.yml`, `sync-releases.yml` |
+| `codeberg.yaml` | `CB_SYNC_TOKEN` | `sync-mirrors.yml`, `sync-releases.yml` |
 
 Top-level YAML keys are the exact env var names the build expects;
 `scripts/ci/sops-env.sh` exports them verbatim.
