@@ -235,25 +235,82 @@ jobs:
     uses: privacyguides/.github/.github/workflows/sign-artifact.yml@5c41b37a937aab5e50262f3ab672fc9b9438dbf9
     with:
       artifact-name: built-apk
-      artifact-path: ${{ needs.build.outputs.path }}
+      # Attest both the APK and its v4 signature sidecar (both are in the
+      # built-apk artifact). subject-path takes a newline-delimited list, so
+      # every main release asset gets provenance.
+      artifact-path: |
+        ${{ needs.build.outputs.path }}
+        ${{ needs.build.outputs.idsig }}
+
+  # Build the Google Play variant (org.privacyguides.verifiedapps.play) and
+  # upload its App Bundle to Play. Gated on `build` so a version-mismatch never
+  # reaches Play. Soft-skips when Play secrets are absent. Produces the
+  # built-play-aab artifact consumed by the release job below.
+  play:
+    needs: build
+    uses: ./.github/workflows/release-play.yml
+    with:
+      tag: ${{ github.ref_name }}
+    secrets: inherit
+
+  # Attest the Play App Bundle via the same org signer workflow as the main APK,
+  # so `gh attestation verify` works on VerifiedApps-<tag>-play.aab too. Skipped
+  # (along with no effect on the release) when Play isn't configured.
+  attest-play:
+    needs: play
+    if: needs.play.outputs.configured == 'true'
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    uses: privacyguides/.github/.github/workflows/sign-artifact.yml@5c41b37a937aab5e50262f3ab672fc9b9438dbf9
+    with:
+      artifact-name: built-play-aab
+      artifact-path: ${{ needs.play.outputs.asset_name }}
 
   release:
-    needs: [build, attest]
+    needs: [build, attest, play]
     runs-on: ubuntu-latest
     permissions:
       contents: write
       id-token: write
 
     steps:
-      - name: Download artifact
+      - name: Download release APK
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: built-apk
+
+      # The Play bundle may be absent (Play not configured -> play job soft-skips),
+      # so don't fail the release if the artifact doesn't exist.
+      - name: Download Play App Bundle
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: built-play-aab
+
+      # The release is immutable, so all assets must be present at creation.
+      # Build the asset list from what actually landed on disk.
+      - name: Collect release assets
+        id: assets
+        env:
+          MAIN_APK: ${{ needs.build.outputs.path }}
+          MAIN_IDSIG: ${{ needs.build.outputs.idsig }}
+          PLAY_AAB: ${{ needs.play.outputs.asset_name }}
+        run: |
+          LIST="${MAIN_APK},${MAIN_IDSIG}"
+          if [ -n "$PLAY_AAB" ] && [ -f "$PLAY_AAB" ]; then
+            LIST="${LIST},${PLAY_AAB}"
+            echo "Including Play App Bundle: ${PLAY_AAB}"
+          else
+            echo "No Play App Bundle to include (Play not configured or skipped)."
+          fi
+          echo "artifacts=${LIST}" >> "$GITHUB_OUTPUT"
 
       - name: Create release notes
         id: release
         uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1.21.0
         with:
-          artifacts: "${{ needs.build.outputs.path }},${{ needs.build.outputs.idsig }}"
+          artifacts: ${{ steps.assets.outputs.artifacts }}
           immutableCreate: true
           prerelease: false

@@ -21,6 +21,9 @@ org.privacyguides.verifiedapps
 40:5C:6B:D2:CA:7C:3A:AE:8F:46:3C:6F:8B:55:BC:F0:DD:AC:43:1C:5E:D8:EA:FF:65:D1:06:C9:81:7A:20:7F
 ```
 
+> [!NOTE]
+> A separate build is published to Google Play under the package ID `org.privacyguides.verifiedapps.play`. It is built reproducibly from the same source tag, but is signed by Google via Play App Signing — so its signing certificate hash differs from the GitHub build **by design** and is **not** the fingerprint shown above. The GitHub build above remains the canonical, independently verifiable release; the distinct package ID means the two never collide and can be installed side by side. The Play build is produced and uploaded by the [`release-play.yml`](.github/workflows/release-play.yml) workflow. The exact Android App Bundle submitted to Play is attached to each GitHub release as `VerifiedApps-<version>-play.aab` for reference — it carries `gh attestation` provenance like the APK, but it is **not** meant for sideloading (Google re-signs the APKs it distributes from this bundle).
+
 **This app shouldn't/can't be used to verify itself.** We do not recommend any specific way to verify the signing certificate of the APK file you've downloaded. However, many people use an AppVerifier install they trust to check the signatures of their APK files. Obtainium is another app which will display the signing certificate of apps it's downloaded.
 
 > [!TIP]

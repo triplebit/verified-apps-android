@@ -1,0 +1,209 @@
+# Builds the Google Play variant (org.privacyguides.verifiedapps.play) and
+# uploads the App Bundle to Google Play. Also publishes the signed bundle as a
+# GitHub release asset (VerifiedApps-<tag>-play.aab) — for reference and
+# provenance (gh attestation), not for sideloading: Google's Play App Signing
+# re-signs the distributed APKs, so this bundle is the artifact we submitted,
+# not what end users install.
+#
+# This is BOTH dispatchable (workflow_dispatch) and callable (workflow_call):
+# release.yml calls it during a tagged release so the -play.aab is attached to
+# the (immutable) GitHub release at creation time. A standalone dispatch run
+# publishes to Play and exposes the bundle as a run artifact, but cannot attach
+# to an already-published immutable release — re-cut the tag for that.
+#
+# Required repository secrets:
+#   PLAY_SERVICE_ACCOUNT_JSON     — Play Developer API service-account JSON key.
+#                                   Absent => this workflow soft-skips (never
+#                                   breaks the main release).
+#   PLAY_UPLOAD_KEYSTORE_BASE64   — dedicated Play upload keystore, base64-encoded
+#   PLAY_UPLOAD_KEYSTORE_PASSWORD
+#   PLAY_UPLOAD_KEY_ALIAS
+#   PLAY_UPLOAD_KEY_PASSWORD
+#
+# One-time setup: create the service account in Google Cloud, grant it access in
+# Play Console (Users & permissions), create the app listing, and enroll the
+# upload key in Play App Signing.
+
+name: Build & Publish to Google Play
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "CalVer tag to build (YY.MM.PATCH). Blank = latest release."
+        required: false
+        default: ""
+      track:
+        description: "Play track to publish to."
+        required: false
+        default: "internal"
+        type: choice
+        options: [internal, alpha, beta, production]
+      release_status:
+        description: "Play release status."
+        required: false
+        default: "draft"
+        type: choice
+        options: [draft, completed, halted, inProgress]
+  workflow_call:
+    inputs:
+      tag:
+        description: "CalVer tag to build. Blank = latest release."
+        required: false
+        default: ""
+        type: string
+      track:
+        required: false
+        default: "internal"
+        type: string
+      release_status:
+        required: false
+        default: "draft"
+        type: string
+    outputs:
+      configured:
+        description: "Whether Play secrets were present and the build ran."
+        value: ${{ jobs.play.outputs.configured }}
+      asset_name:
+        description: "Filename of the produced -play.aab (empty if skipped)."
+        value: ${{ jobs.play.outputs.asset_name }}
+
+permissions:
+  contents: read
+
+jobs:
+  play:
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.cfg.outputs.configured }}
+      asset_name: ${{ steps.aab.outputs.name }}
+    steps:
+      - name: Check Play configuration
+        id: cfg
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "::warning::PLAY_SERVICE_ACCOUNT_JSON not set; skipping Play build and upload."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Resolve tag
+        id: tag
+        if: steps.cfg.outputs.configured == 'true'
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ -n "$INPUT_TAG" ]; then
+            TAG="$INPUT_TAG"
+          else
+            TAG=$(gh release view --repo "$REPO" --json tagName -q .tagName 2>/dev/null || true)
+          fi
+          if [ -z "$TAG" ]; then
+            echo "::error::No tag provided and no releases found."
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Building Play artifacts for tag ${TAG}."
+
+      - name: Checkout
+        if: steps.cfg.outputs.configured == 'true'
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ steps.tag.outputs.tag }}
+
+      - name: Set up JDK
+        if: steps.cfg.outputs.configured == 'true'
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android SDK
+        if: steps.cfg.outputs.configured == 'true'
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+
+      - name: Set up Gradle
+        if: steps.cfg.outputs.configured == 'true'
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        with:
+          validate-wrappers: true
+
+      - name: Set up Ruby & fastlane
+        if: steps.cfg.outputs.configured == 'true'
+        uses: ruby/setup-ruby@afeafc3d1ab54a631816aba4c914a0081c12ff2f # v1.310.0
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Prepare Play upload keystore & service account
+        id: secrets
+        if: steps.cfg.outputs.configured == 'true'
+        env:
+          PLAY_UPLOAD_KEYSTORE_BASE64: ${{ secrets.PLAY_UPLOAD_KEYSTORE_BASE64 }}
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$PLAY_UPLOAD_KEYSTORE_BASE64" ]; then
+            echo "::error::Missing PLAY_UPLOAD_KEYSTORE_BASE64 secret."
+            exit 1
+          fi
+          KEYSTORE_PATH="${{ runner.temp }}/play-upload.keystore"
+          JSON_PATH="${{ runner.temp }}/play-service-account.json"
+          echo "$PLAY_UPLOAD_KEYSTORE_BASE64" | base64 -d > "$KEYSTORE_PATH"
+          printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON" > "$JSON_PATH"
+          echo "keystore=${KEYSTORE_PATH}" >> "$GITHUB_OUTPUT"
+          echo "json=${JSON_PATH}" >> "$GITHUB_OUTPUT"
+
+      - name: Build Play App Bundle
+        if: steps.cfg.outputs.configured == 'true'
+        env:
+          PLAY_UPLOAD_KEYSTORE_PATH: ${{ steps.secrets.outputs.keystore }}
+          PLAY_UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.PLAY_UPLOAD_KEYSTORE_PASSWORD }}
+          PLAY_UPLOAD_KEY_ALIAS: ${{ secrets.PLAY_UPLOAD_KEY_ALIAS }}
+          PLAY_UPLOAD_KEY_PASSWORD: ${{ secrets.PLAY_UPLOAD_KEY_PASSWORD }}
+        # Pin SOURCE_DATE_EPOCH to the tag commit time, mirroring release.yml, so
+        # the Play build is reproducible too.
+        run: |
+          SOURCE_DATE_EPOCH=$(git log -1 --format=%ct) \
+            ./gradlew :app:bundleRelease -PplayBuild=true --no-daemon
+
+      - name: Package Play App Bundle
+        id: aab
+        if: steps.cfg.outputs.configured == 'true'
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          AAB="app/build/outputs/bundle/release/app-release.aab"
+          if [ ! -f "$AAB" ]; then
+            echo "::error::No App Bundle found at $AAB"
+            exit 1
+          fi
+          # App Bundles use JAR signing; verify it's actually signed with the
+          # upload key before publishing (mirrors release.yml's unsigned guard).
+          if ! jarsigner -verify "$AAB" 2>&1 | grep -q "jar verified"; then
+            echo "::error::Play App Bundle is unsigned. Check PLAY_UPLOAD_KEYSTORE_* secrets."
+            exit 1
+          fi
+          AAB_ASSET="VerifiedApps-${TAG}-play.aab"
+          cp "$AAB" "$AAB_ASSET"
+          echo "name=${AAB_ASSET}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload App Bundle to Google Play
+        if: steps.cfg.outputs.configured == 'true'
+        env:
+          PLAY_JSON_KEY_FILE: ${{ steps.secrets.outputs.json }}
+          PLAY_AAB_PATH: app/build/outputs/bundle/release/app-release.aab
+          PLAY_TRACK: ${{ inputs.track }}
+          PLAY_RELEASE_STATUS: ${{ inputs.release_status }}
+        run: bundle exec fastlane internal
+
+      - name: Upload Play App Bundle artifact
+        if: steps.cfg.outputs.configured == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: built-play-aab
+          path: ${{ steps.aab.outputs.name }}

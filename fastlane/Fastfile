@@ -1,0 +1,47 @@
+# Fastlane lanes for the Google Play build of Verified Apps.
+#
+# Package: org.privacyguides.verifiedapps.play (see Appfile). The artifact is an
+# Android App Bundle signed with the dedicated Play upload key; Google's Play
+# App Signing re-signs the distributed APKs. The canonical GitHub APK is built
+# and published separately and never goes through here.
+#
+# Build the bundle first (from the repo root):
+#   ./gradlew :app:bundleRelease -PplayBuild=true
+#
+# Environment:
+#   PLAY_JSON_KEY_FILE   path to the Play service-account JSON (set in Appfile)
+#   PLAY_AAB_PATH        path to the .aab (default: the standard release output)
+#   PLAY_TRACK           Play track (default: internal)
+#   PLAY_RELEASE_STATUS  draft | completed | halted | inProgress (default: draft)
+
+default_platform(:android)
+
+AAB_DEFAULT = "app/build/outputs/bundle/release/app-release.aab".freeze
+
+platform :android do
+  desc "Upload the Play App Bundle (and matching changelog) to the internal track"
+  lane :internal do
+    upload_to_play_store(
+      track: ENV.fetch("PLAY_TRACK", "internal"),
+      aab: ENV.fetch("PLAY_AAB_PATH", AAB_DEFAULT),
+      # Default to a draft so a human confirms rollout in the Play Console; CI
+      # can override to "completed" via PLAY_RELEASE_STATUS.
+      release_status: ENV.fetch("PLAY_RELEASE_STATUS", "draft"),
+      # Publish only the binary + release notes from this lane. The store
+      # listing is managed separately (see the `metadata` lane) so a listing
+      # validation error can never block a binary upload.
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+
+  desc "Push the in-repo store listing (title, descriptions, screenshots, icon) only"
+  lane :metadata do
+    upload_to_play_store(
+      skip_upload_aab: true,
+      skip_upload_apk: true,
+      skip_upload_changelogs: true
+    )
+  end
+end
