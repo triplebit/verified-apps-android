@@ -9,6 +9,9 @@ ENV LC_ALL=C.UTF-8
 ENV USER_UID=1000
 ENV USER_GID=1000
 ENV USERNAME=vscode
+ENV GEM_HOME=/usr/local/bundle
+ENV BUNDLE_PATH=/usr/local/bundle
+ENV PATH=/usr/local/bundle/bin:${PATH}
 
 # Things I cache with every Dockerfile
 RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt,sharing=locked \
@@ -63,6 +66,26 @@ RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt,sharing=locked \
         fdroidserver \
         apksigner \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Ruby and fastlane dependencies
+RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=apt-lib,target=/var/lib/apt,sharing=locked \
+    --mount=type=cache,id=debconf,target=/var/cache/debconf,sharing=locked \
+    set -exu && \
+    apt-get update -qq && \
+    apt-get -y install -y -qq --no-install-recommends \
+        build-essential \
+        ruby \
+        ruby-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY Gemfile Gemfile.lock /tmp/verified-apps-bundle/
+RUN set -exu && \
+    gem install bundler -v 2.4.22 --no-document && \
+    cd /tmp/verified-apps-bundle && \
+    bundle install --jobs 4 --retry 3 && \
+    chmod -R a+rX "${GEM_HOME}" && \
+    rm -rf /tmp/verified-apps-bundle
 
 ARG AGE_VERSION=1.3.1
 ARG SOPS_VERSION=3.13.1
