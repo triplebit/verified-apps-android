@@ -83,7 +83,7 @@ jobs:
           ref: ${{ steps.tag.outputs.tag }}
 
       - name: Install sops
-        run: ./scripts/ci/install-sops.sh
+        run: bash scripts/ci/install-sops.sh
 
       # Soft-skip gate when Play isn't configured. Pipes to grep for an exit
       # code rather than capturing plaintext into a variable.
@@ -138,7 +138,7 @@ jobs:
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: |
-          ./scripts/ci/sops-env.sh secrets/google-play.yaml \
+          bash scripts/ci/sops-env.sh secrets/google-play.yaml \
             PLAY_SERVICE_ACCOUNT_JSON \
             PLAY_UPLOAD_KEYSTORE_BASE64 \
             PLAY_UPLOAD_KEYSTORE_PASSWORD \

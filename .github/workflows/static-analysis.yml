@@ -82,7 +82,7 @@ jobs:
           echo "No shell tracing in workflows or scripts."
 
       - name: Install sops
-        run: ./scripts/ci/install-sops.sh
+        run: bash scripts/ci/install-sops.sh
 
       - name: Verify every secrets file decrypts with the CI key
         env:

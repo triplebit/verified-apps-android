@@ -37,12 +37,12 @@ jobs:
           ref: main
 
       - name: Install sops
-        run: ./scripts/ci/install-sops.sh
+        run: bash scripts/ci/install-sops.sh
 
       - name: Load Codeberg API token
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
-        run: ./scripts/ci/sops-env.sh secrets/codeberg.yaml CB_SYNC_TOKEN
+        run: bash scripts/ci/sops-env.sh secrets/codeberg.yaml CB_SYNC_TOKEN
 
       - name: Mirror GitHub release to Codeberg
         env:

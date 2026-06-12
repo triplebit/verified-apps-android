@@ -25,7 +25,7 @@ Recover them from the existing GitHub secrets:
 gh workflow run export-secrets-once.yml
 gh run watch
 gh run download --name sops-migration-export --dir sops-migration-export
-./scripts/import-exported-secrets.sh sops-migration-export
+bash scripts/import-exported-secrets.sh sops-migration-export
 rm -rf sops-migration-export
 ```
 

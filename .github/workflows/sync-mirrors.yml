@@ -24,12 +24,12 @@ jobs:
           ref: main
 
       - name: Install sops
-        run: ./scripts/ci/install-sops.sh
+        run: bash scripts/ci/install-sops.sh
 
       - name: Load mirror SSH key
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
-        run: ./scripts/ci/sops-env.sh secrets/codeberg.yaml ACTIONS_SSH_KEY
+        run: bash scripts/ci/sops-env.sh secrets/codeberg.yaml ACTIONS_SSH_KEY
 
       # In-repo clone --mirror + push --mirror so no third-party action holds
       # the deploy key. Source clone is public https; only the push uses SSH.

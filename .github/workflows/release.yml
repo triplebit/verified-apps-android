@@ -22,14 +22,14 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Install sops
-        run: ./scripts/ci/install-sops.sh
+        run: bash scripts/ci/install-sops.sh
 
       # First, so an unpopulated secrets store fails before toolchain setup.
       - name: Load signing secrets
         env:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: |
-          ./scripts/ci/sops-env.sh secrets/android-signing.yaml \
+          bash scripts/ci/sops-env.sh secrets/android-signing.yaml \
             ANDROID_KEYSTORE_BASE64 \
             ANDROID_KEYSTORE_PASSWORD \
             ANDROID_KEY_ALIAS \
