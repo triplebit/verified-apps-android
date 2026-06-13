@@ -44,7 +44,7 @@ android {
         // CalVer YY.MM.PATCH (e.g. 26.6.0). versionCode = YY*1_000_000 + MM*10_000 + PATCH.
         val releaseVersionYear = 26
         val releaseVersionMonth = 6
-        val releaseVersionPatch = 10
+        val releaseVersionPatch = 11
         versionCode = releaseVersionYear * 1_000_000 + releaseVersionMonth * 10_000 + releaseVersionPatch
         versionName = "${releaseVersionYear}.${releaseVersionMonth}.${releaseVersionPatch}"
 
