@@ -309,7 +309,7 @@ jobs:
         uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1.21.0
         with:
           artifacts: ${{ steps.assets.outputs.artifacts }}
-          immutableCreate: true
+          draft: true
           prerelease: false
           body: |
             Verified Apps is an app signing certificate hash viewer and verifier. It checks your installed apps (or any APK file) against a built-in database of known-good app signing fingerprints.
