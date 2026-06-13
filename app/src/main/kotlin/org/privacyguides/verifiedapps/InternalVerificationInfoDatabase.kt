@@ -10085,6 +10085,20 @@ val internalVerificationInfoDatabase = setOf(
         )
     ),
     InternalDatabaseVerificationInfo(
+        "org.privacyguides.verifiedapps.play",
+        listOf(
+            Hashes(
+                listOf(
+                    Source.VERIFIED_DOMAIN
+                ),
+                listOf(
+                    "E8:58:37:5B:7C:45:CF:C1:D4:E4:F5:1B:4A:D6:59:73:5B:38:2C:82:4F:E2:24:48:36:A8:14:AD:7A:F3:00:61"
+                ),
+                false
+            )
+        )
+    ),
+    InternalDatabaseVerificationInfo(
         "org.proninyaroslav.libretorrent",
         listOf(
             Hashes(
