@@ -24,6 +24,6 @@ jobs:
       # sdklib (jdom2/httpclient/commons-lang3), and the Unified Test Platform
       # (netty/jose4j) — none of which reach the app, so scoping to
       # releaseRuntimeClasspath keeps Dependabot focused on what users actually run.
-      - uses: gradle/actions/dependency-submission@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+      - uses: gradle/actions/dependency-submission@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
         with:
           dependency-graph-include-configurations: '^releaseRuntimeClasspath$'

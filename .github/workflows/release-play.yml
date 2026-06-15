@@ -174,13 +174,13 @@ jobs:
 
       - name: Set up Gradle
         if: steps.cfg.outputs.configured == 'true'
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
         with:
           validate-wrappers: true
 
       - name: Set up Ruby & fastlane
         if: steps.cfg.outputs.configured == 'true'
-        uses: ruby/setup-ruby@afeafc3d1ab54a631816aba4c914a0081c12ff2f # v1.310.0
+        uses: ruby/setup-ruby@89f90524b88a01fe6e0b732220432cc6142926af # v1.313.0
         with:
           ruby-version: "3.3"
           bundler-cache: true
